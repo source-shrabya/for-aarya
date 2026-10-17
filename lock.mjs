@@ -8,8 +8,8 @@ if (!password) {
   process.exit(1);
 }
 
-// Same clean-up as the page does, so "aarya" and " Aarya " both work.
-const normalise = s => s.trim().toLowerCase();
+// Same clean-up as the page does: stray spaces are ignored, case is not.
+const normalise = s => s.trim();
 
 const image = readFileSync(new URL("./letter.jpg", import.meta.url));
 const iterations = 250000;

@@ -2,7 +2,7 @@
 
 A page that looks like the notebook paper of the letter. It asks for a password, then shows the photo of the letter. The page's ruled lines and margin line up with the ones in the photo, so the paper seems to carry on past the picture.
 
-The photo is encrypted with the password, so nobody can see it by viewing the page source or opening the file directly. The password is not case-sensitive.
+The photo is encrypted with the password, so nobody can see it by viewing the page source or opening the file directly. The password is case-sensitive. Spaces at the start and end are ignored.
 
 ## Change the photo or password
 

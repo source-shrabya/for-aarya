@@ -289,7 +289,7 @@
   async function decrypt(password) {
     const { salt, iv, data, iterations } = window.LETTER;
     const baseKey = await crypto.subtle.importKey(
-      "raw", new TextEncoder().encode(password.trim().toLowerCase()), "PBKDF2", false, ["deriveKey"]
+      "raw", new TextEncoder().encode(password.trim()), "PBKDF2", false, ["deriveKey"]
     );
     const key = await crypto.subtle.deriveKey(
       { name: "PBKDF2", salt: b64(salt), iterations, hash: "SHA-256" },
