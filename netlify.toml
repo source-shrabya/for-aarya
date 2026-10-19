@@ -1,0 +1,4 @@
+# Netlify only runs the bot's server (netlify/functions). The page itself stays on GitHub Pages.
+[build]
+  publish = "netlify/public"
+  functions = "netlify/functions"

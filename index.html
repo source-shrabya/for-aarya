@@ -9,13 +9,20 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Kalam:wght@300;400&display=swap" rel="stylesheet">
 <style>
-  /* Colours sampled from the photo of the letter */
+  /* Colours sampled from the photo of the letter. The bot can change the --paper, --rule-hex,
+     --margin-hex, --note-* and --letter-* values; everything else stays as it is. */
   :root {
     --paper: #c3b9a7;
-    --rule: rgba(92, 104, 118, .55);
-    --margin: rgba(196, 120, 104, .7);
+    --rule-hex: #5c6876;
+    --margin-hex: #c47868;
+    --rule: color-mix(in srgb, var(--rule-hex) 55%, transparent);
+    --margin: color-mix(in srgb, var(--margin-hex) 70%, transparent);
     --ink: #1d2a50;
     --ink-soft: #3a4670;
+    --note-ink: #1d2a50;
+    --note-font: "Kalam";
+    --letter-w: 880px;
+    --tilt: 0deg;
     --gap: 44px;        /* distance between ruled lines */
     --rule-y: 0px;      /* where the lines start */
     --margin-x: 120px;  /* the red margin line */
@@ -31,6 +38,24 @@
     background-position: 0 0, 0 var(--rule-y);
     background-repeat: no-repeat, repeat;
   }
+  html[data-pattern="grid"] {
+    background-image:
+      linear-gradient(to right, transparent calc(var(--margin-x) - 1px), var(--margin) calc(var(--margin-x) - 1px), var(--margin) calc(var(--margin-x) + 1px), transparent calc(var(--margin-x) + 1px)),
+      linear-gradient(to bottom, transparent calc(var(--gap) - 2px), var(--rule) calc(var(--gap) - 2px), var(--rule) var(--gap)),
+      linear-gradient(to right, transparent calc(var(--gap) - 2px), var(--rule) calc(var(--gap) - 2px), var(--rule) var(--gap));
+    background-size: 100% 100%, 100% var(--gap), var(--gap) 100%;
+    background-position: 0 0, 0 var(--rule-y), var(--margin-x) 0;
+    background-repeat: no-repeat, repeat, repeat;
+  }
+  html[data-pattern="dots"] {
+    background-image:
+      linear-gradient(to right, transparent calc(var(--margin-x) - 1px), var(--margin) calc(var(--margin-x) - 1px), var(--margin) calc(var(--margin-x) + 1px), transparent calc(var(--margin-x) + 1px)),
+      radial-gradient(circle, var(--rule) 1.6px, transparent 2.2px);
+    background-size: 100% 100%, var(--gap) var(--gap);
+    background-position: 0 0, var(--margin-x) calc(var(--rule-y) + var(--gap) / 2);
+    background-repeat: no-repeat, repeat;
+  }
+  html[data-pattern="plain"] { background-image: none; }
   body {
     margin: 0;
     min-height: 100dvh;
@@ -111,16 +136,19 @@
   /* The letter itself, faded into the page so the page looks like more of the same sheet */
   .letter {
     display: none;
-    grid-template-columns: 1fr min(880px, 94vw) 1fr;
+    position: relative;
+    grid-template-columns: 1fr min(var(--letter-w), 94vw) 1fr;
+    grid-template-areas: "top top top" "left img right" "bottom bottom bottom";
     padding: 24px 0 48px;
   }
   .letter.shown { display: grid; }
   .letter #img {
-    grid-column: 2;
+    grid-area: img;
     display: block;
     width: 100%;
     height: auto;
     margin: 0 auto;
+    transform: rotate(var(--tilt));
     -webkit-mask-image:
       linear-gradient(to right, transparent 0, #000 5%, #000 95%, transparent 100%),
       linear-gradient(to bottom, transparent 0, #000 4%, #000 97%, transparent 100%);
@@ -142,8 +170,8 @@
     padding: 8px 12px;
     min-width: 0;
   }
-  .side.left { grid-column: 1; grid-row: 1; }
-  .side.right { grid-column: 3; grid-row: 1; }
+  .side.left { grid-area: left; }
+  .side.right { grid-area: right; }
   .side figure {
     position: relative;
     margin: -40px 0 0;
@@ -155,6 +183,7 @@
   }
   .side figure:first-child { margin-top: 24px; }
   .side img { display: block; width: 100%; height: auto; }
+  .side figcaption { display: none; }
   /* a bit of masking tape */
   .side figure::before {
     content: "";
@@ -167,29 +196,75 @@
     background: rgba(240, 232, 205, .7);
     box-shadow: 0 1px 2px rgba(0, 0, 0, .12);
   }
+  [data-pics="polaroid"] .side figure { background: #fbf8f1; padding: 8px 8px 0; }
+  [data-pics="polaroid"] .side figure::before { display: none; }
+  [data-pics="polaroid"] .side figcaption {
+    display: block;
+    min-height: 34px;
+    font: 400 18px/34px var(--note-font), "Kalam", cursive;
+    color: #333;
+    text-align: center;
+  }
+  [data-pics="plain"] .side figure { box-shadow: none; }
+  [data-pics="plain"] .side figure::before { display: none; }
   .letter.open .side figure { opacity: 1; }
   .side figure:nth-child(1) { transition-delay: 1.0s; }
   .side figure:nth-child(2) { transition-delay: 1.3s; }
   .side figure:nth-child(3) { transition-delay: 1.6s; }
   .side figure:nth-child(4) { transition-delay: 1.9s; }
   .side figure:nth-child(5) { transition-delay: 2.2s; }
-  .side figure:nth-child(6) { transition-delay: 2.5s; }
+  .side figure:nth-child(n+6) { transition-delay: 2.5s; }
+
+  /* Handwritten notes the bot can add */
+  .notes { grid-area: top; display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 48px; padding: 0 24px; }
+  .notes.bottom { grid-area: bottom; padding-top: 16px; }
+  .note {
+    margin: 0;
+    max-width: 420px;
+    font-family: var(--note-font), "Kalam", cursive;
+    font-weight: 400;
+    font-size: 26px;
+    line-height: 1.3;
+    color: var(--note-ink);
+    white-space: pre-line;
+    transform: rotate(-1.5deg);
+  }
+  .side .note { margin: 28px 0 8px; font-size: 23px; text-align: center; max-width: 100%; }
+  .side .note:nth-child(even) { transform: rotate(2deg); }
+
+  /* Stickers and falling effects */
+  .stickers { position: absolute; inset: 0; pointer-events: none; z-index: 3; overflow: hidden; }
+  .stickers span { position: absolute; line-height: 1; transform: translate(-50%, -50%) rotate(var(--rot)); }
+  .effect { position: fixed; inset: 0; pointer-events: none; z-index: 4; overflow: hidden; }
+  .effect span {
+    position: absolute;
+    top: -10vh;
+    line-height: 1;
+    animation: fall linear infinite;
+  }
+  @keyframes fall {
+    from { transform: translate(0, 0) rotate(0deg); }
+    to { transform: translate(var(--drift), 120vh) rotate(var(--spin)); }
+  }
 
   /* Not enough room beside the letter: put the pictures underneath it */
   @media (max-width: 1100px) {
-    .letter { grid-template-columns: 1fr; justify-items: center; overflow-x: clip; }
-    .letter #img { grid-column: 1; grid-row: 1; width: min(880px, 94vw); }
+    .letter {
+      grid-template-columns: 1fr;
+      grid-template-areas: "top" "img" "left" "right" "bottom";
+      justify-items: center;
+      overflow-x: clip;
+    }
+    .letter #img { width: min(var(--letter-w), 94vw); }
     .side.left, .side.right {
-      grid-column: 1;
-      grid-row: 2;
       flex-direction: row;
       flex-wrap: wrap;
       justify-content: center;
       gap: 28px;
       padding-top: 32px;
     }
-    .side.right { grid-row: 3; padding-top: 28px; }
     .side figure, .side figure:first-child { margin: 0; width: 160px; }
+    .side .note { width: 100%; }
   }
   /* Phones: let the letter use the whole width so the handwriting is as big as it can be */
   @media (max-width: 600px) {
@@ -205,6 +280,7 @@
     }
     .side.left, .side.right { gap: 22px; padding-left: 8px; padding-right: 8px; }
     .side figure, .side figure:first-child { width: calc(50vw - 30px); }
+    .note { font-size: 22px; }
   }
 
   @media (max-width: 600px) {
@@ -214,9 +290,125 @@
     .lock input { width: 120px; }
     .lock form { gap: 10px; }
   }
+
+  /* The decorating bot */
+  .bot-open {
+    display: none;
+    position: fixed;
+    right: 20px;
+    bottom: 20px;
+    z-index: 10;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 18px 10px 14px;
+    border: 0;
+    border-radius: 999px;
+    background: var(--ink);
+    color: #f6efe2;
+    font: 400 20px/1 "Kalam", cursive;
+    box-shadow: 0 4px 14px rgba(29, 42, 80, .35);
+    cursor: pointer;
+  }
+  .bot-open.ready { display: inline-flex; }
+  .bot-open svg { width: 20px; height: 20px; }
+  .bot {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 11;
+    width: min(380px, 100vw);
+    display: flex;
+    flex-direction: column;
+    background: #f3ede1;
+    color: #2a2a2a;
+    border-left: 1px solid rgba(0, 0, 0, .12);
+    box-shadow: -8px 0 30px rgba(40, 30, 20, .2);
+    font: 16px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif;
+    transform: translateX(105%);
+    transition: transform .3s ease;
+  }
+  .bot.open { transform: none; }
+  .bot header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px;
+    border-bottom: 1px solid rgba(0, 0, 0, .1);
+  }
+  .bot h2 { margin: 0; font: 400 22px/1.2 "Kalam", cursive; color: var(--ink); }
+  .bot .x { border: 0; background: none; font-size: 26px; line-height: 1; cursor: pointer; color: #555; padding: 4px 8px; }
+  .bot .log { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+  .bot .msg { max-width: 85%; padding: 8px 12px; border-radius: 14px; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .bot .msg.user { align-self: flex-end; background: var(--ink); color: #f6efe2; border-bottom-right-radius: 4px; }
+  .bot .msg.bot-msg { align-self: flex-start; background: #fff; border-bottom-left-radius: 4px; }
+  .bot .msg.error { align-self: flex-start; background: #f7dede; color: #7a1f1f; }
+  .bot .msg.wait { color: #777; font-style: italic; }
+  .bot .ideas { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 16px 10px; }
+  .bot .ideas button {
+    border: 1px solid rgba(29, 42, 80, .3);
+    background: transparent;
+    color: var(--ink);
+    border-radius: 999px;
+    padding: 4px 10px;
+    font: inherit;
+    font-size: 14px;
+    cursor: pointer;
+  }
+  .bot form { display: flex; gap: 8px; padding: 10px 16px; border-top: 1px solid rgba(0, 0, 0, .1); }
+  .bot textarea {
+    flex: 1;
+    resize: none;
+    min-height: 44px;
+    max-height: 120px;
+    padding: 10px 12px;
+    border: 1px solid rgba(0, 0, 0, .2);
+    border-radius: 12px;
+    font: inherit;
+    font-size: 16px; /* 16px stops phones zooming in on focus */
+    background: #fff;
+    color: #222;
+  }
+  .bot .send {
+    border: 0;
+    border-radius: 12px;
+    padding: 0 16px;
+    background: var(--ink);
+    color: #f6efe2;
+    font: inherit;
+    cursor: pointer;
+  }
+  .bot button:disabled { opacity: .5; cursor: default; }
+  .bot footer { display: flex; gap: 8px; padding: 0 16px 14px; }
+  .bot footer button {
+    border: 0;
+    background: none;
+    color: #555;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    font: inherit;
+    font-size: 14px;
+    cursor: pointer;
+    padding: 4px 0;
+    margin-right: 12px;
+  }
+  @media (max-width: 600px) {
+    .bot {
+      top: auto;
+      height: 72dvh;
+      width: 100vw;
+      border-left: 0;
+      border-top: 1px solid rgba(0, 0, 0, .12);
+      border-radius: 18px 18px 0 0;
+      transform: translateY(105%);
+    }
+    .bot-open { right: 14px; bottom: 14px; }
+  }
+
   @media (prefers-reduced-motion: reduce) {
-    .letter #img, .side figure { transition: none; }
+    .letter #img, .side figure, .bot { transition: none; }
     .shake { animation: none; }
+    .effect { display: none; }
   }
 </style>
 </head>
@@ -235,29 +427,64 @@
 </main>
 
 <div class="letter" id="letter">
-  <aside class="side left">
-    <figure style="--r:-4deg; --x:10px; --w:200px"><img src="art/aslan-lucy.jpg" alt=""></figure>
-    <figure style="--r:3deg; --x:-14px; --w:170px; --t:5deg"><img src="art/ladybugs.jpg" alt=""></figure>
-    <figure style="--r:-2deg; --x:18px; --w:180px"><img src="art/sun.jpg" alt=""></figure>
-    <figure style="--r:4deg; --x:-8px; --w:165px; --t:3deg"><img src="art/reepicheep.jpg" alt=""></figure>
-    <figure style="--r:-3deg; --x:12px; --w:160px"><img src="art/lamppost.jpg" alt=""></figure>
-    <figure style="--r:2deg; --x:-10px; --w:185px; --t:-6deg"><img src="art/aslan-sky.jpg" alt=""></figure>
+  <div class="notes top" id="notes-top"></div>
+  <aside class="side left" id="side-left">
+    <figure><img src="art/aslan-lucy.jpg" alt=""></figure>
+    <figure><img src="art/ladybugs.jpg" alt=""></figure>
+    <figure><img src="art/sun.jpg" alt=""></figure>
+    <figure><img src="art/reepicheep.jpg" alt=""></figure>
+    <figure><img src="art/lamppost.jpg" alt=""></figure>
+    <figure><img src="art/aslan-sky.jpg" alt=""></figure>
   </aside>
   <img id="img" alt="प्रिय आर्या, a handwritten letter">
-  <aside class="side right">
-    <figure style="--r:3deg; --x:-10px; --w:175px; --t:4deg"><img src="art/aslan-forest.jpg" alt=""></figure>
-    <figure style="--r:-4deg; --x:14px; --w:160px"><img src="art/sun-colour.jpg" alt=""></figure>
-    <figure style="--r:2deg; --x:-16px; --w:180px; --t:-3deg"><img src="art/dawn-treader.jpg" alt=""></figure>
-    <figure style="--r:-3deg; --x:10px; --w:190px; --t:6deg"><img src="art/ladybug-mushroom.jpg" alt=""></figure>
-    <figure style="--r:4deg; --x:-12px; --w:175px"><img src="art/aslan-sunlit.jpg" alt=""></figure>
-    <figure style="--r:-2deg; --x:8px; --w:170px; --t:-5deg"><img src="art/sun-swirl.jpg" alt=""></figure>
+  <aside class="side right" id="side-right">
+    <figure><img src="art/aslan-forest.jpg" alt=""></figure>
+    <figure><img src="art/sun-colour.jpg" alt=""></figure>
+    <figure><img src="art/dawn-treader.jpg" alt=""></figure>
+    <figure><img src="art/ladybug-mushroom.jpg" alt=""></figure>
+    <figure><img src="art/aslan-sunlit.jpg" alt=""></figure>
+    <figure><img src="art/sun-swirl.jpg" alt=""></figure>
   </aside>
+  <div class="notes bottom" id="notes-bottom"></div>
+  <div class="stickers" id="stickers" aria-hidden="true"></div>
 </div>
+<div class="effect" id="effect" aria-hidden="true"></div>
+
+<button class="bot-open" id="bot-open" type="button" aria-controls="bot" aria-expanded="false">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+  सजाउ
+</button>
+<section class="bot" id="bot" aria-label="Decorate this page" inert>
+  <header>
+    <h2>यो पेज सजाउ</h2>
+    <button class="x" id="bot-close" type="button" aria-label="Close">×</button>
+  </header>
+  <div class="log" id="bot-log" aria-live="polite">
+    <p class="msg bot-msg">Tell me how you want this page to look, in Nepali or English. I can change the paper, colours, pictures, add notes and stickers, or make things fall from the sky. Changes are saved, so Shrabya sees them too.</p>
+  </div>
+  <div class="ideas" id="bot-ideas">
+    <button type="button">make the paper pink</button>
+    <button type="button">add falling hearts</button>
+    <button type="button">polaroid pictures with captions</button>
+    <button type="button">write a note: I miss you</button>
+  </div>
+  <form id="bot-form">
+    <textarea id="bot-input" rows="1" placeholder="e.g. make it look like autumn" aria-label="What should I change?"></textarea>
+    <button class="send" id="bot-send" type="submit">Send</button>
+  </form>
+  <footer>
+    <button type="button" id="bot-undo">Undo last change</button>
+    <button type="button" id="bot-reset">Back to original</button>
+  </footer>
+</section>
 
 <script src="letter.js"></script>
 <script>
+  const API = "https://for-aarya-bot.netlify.app/api";
   const root = document.documentElement.style;
   const b64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+  const $ = id => document.getElementById(id);
+  let password = "";
 
   // Lock screen: lines every 44px, margin line a little in from the left.
   function layoutLock() {
@@ -272,7 +499,7 @@
   // In the photo (1354 x 1600) the first rule is at y=111.5, rules are 58px apart,
   // and the margin line is at x=181.
   function layoutLetter() {
-    const img = document.getElementById("img");
+    const img = $("img");
     const r = img.getBoundingClientRect();
     const top = r.top + scrollY;
     const gap = r.height * 58 / 1600;
@@ -285,11 +512,13 @@
   let layout = layoutLock;
   layout();
   addEventListener("resize", () => layout());
+  // Notes, fonts and pictures loading in can move the letter; re-line the paper when they do.
+  new ResizeObserver(() => layout()).observe(document.getElementById("letter"));
 
-  async function decrypt(password) {
+  async function decrypt(pass) {
     const { salt, iv, data, iterations } = window.LETTER;
     const baseKey = await crypto.subtle.importKey(
-      "raw", new TextEncoder().encode(password.trim()), "PBKDF2", false, ["deriveKey"]
+      "raw", new TextEncoder().encode(pass.trim()), "PBKDF2", false, ["deriveKey"]
     );
     const key = await crypto.subtle.deriveKey(
       { name: "PBKDF2", salt: b64(salt), iterations, hash: "SHA-256" },
@@ -299,23 +528,209 @@
   }
 
   function show(bytes) {
-    const img = document.getElementById("img");
-    const wrap = document.getElementById("letter");
+    const img = $("img");
+    const wrap = $("letter");
     img.onload = () => {
       layout = layoutLetter;
       layout();
       requestAnimationFrame(() => wrap.classList.add("open"));
     };
     img.src = URL.createObjectURL(new Blob([bytes], { type: window.LETTER.type }));
-    document.getElementById("lock").style.display = "none";
+    $("lock").style.display = "none";
     wrap.classList.add("shown");
     document.title = "प्रिय आर्या";
   }
 
-  const form = document.getElementById("form");
-  const pw = document.getElementById("pw");
-  const btn = document.getElementById("btn");
-  const err = document.getElementById("err");
+  // ---- drawing the page from saved settings ------------------------------
+
+  // Fixed scatter so pictures sit at the same angles every visit.
+  const JITTER = [
+    { r: -4, x: 10, w: 200, t: -4 }, { r: 3, x: -14, w: 170, t: 5 }, { r: -2, x: 18, w: 180, t: -4 },
+    { r: 4, x: -8, w: 165, t: 3 }, { r: -3, x: 12, w: 160, t: -4 }, { r: 2, x: -10, w: 185, t: -6 },
+    { r: 3, x: -10, w: 175, t: 4 }, { r: -4, x: 14, w: 160, t: -4 }, { r: 2, x: -16, w: 180, t: -3 },
+    { r: -3, x: 10, w: 190, t: 6 },
+  ];
+  const SIZES = { small: "680px", medium: "880px", large: "1040px" };
+  const FALLING = {
+    hearts: { chars: ["♥"], colors: ["#c0392b", "#e05a6d", "#a8233a"] },
+    petals: { chars: ["❀", "✿"], colors: ["#e89ab0", "#f2b8c6", "#d97a96"] },
+    sparkles: { chars: ["✦", "✧"], colors: ["#d4a017", "#f0c94a", "#fff3b0"] },
+    snow: { chars: ["❄", "•"], colors: ["#ffffff", "#eef4fb"] },
+    ladybugs: { chars: ["🐞"], colors: [""] },
+    stars: { chars: ["★", "☆"], colors: ["#e8b923", "#f5d76e"] },
+  };
+  const loadedFonts = new Set(["Kalam"]);
+  let lastEffect = null;
+
+  function el(tag, props = {}, kids = []) {
+    const node = Object.assign(document.createElement(tag), props);
+    node.append(...kids);
+    return node;
+  }
+
+  function figure(pic, i) {
+    const j = JITTER[i % JITTER.length];
+    const f = el("figure", {}, [
+      el("img", { src: pic.src, alt: pic.caption || "", loading: "lazy", referrerPolicy: "no-referrer" }),
+      el("figcaption", { textContent: pic.caption || "" }),
+    ]);
+    f.style.cssText = `--r:${j.r}deg; --x:${j.x}px; --w:${j.w}px; --t:${j.t}deg`;
+    return f;
+  }
+
+  // The pictures already in the page (shown if the bot's server can't be reached)
+  for (const side of ["left", "right"]) {
+    [...$("side-" + side).children].forEach((f, i) => {
+      const j = JITTER[(side === "right" ? i + 6 : i) % JITTER.length];
+      f.style.cssText = `--r:${j.r}deg; --x:${j.x}px; --w:${j.w}px; --t:${j.t}deg`;
+    });
+  }
+
+  function note(n) {
+    const p = el("p", { className: "note", textContent: n.text });
+    p.style.color = n.color;
+    return p;
+  }
+
+  function applySettings(s) {
+    root.setProperty("--paper", s.paper.color);
+    root.setProperty("--rule-hex", s.paper.lines);
+    root.setProperty("--margin-hex", s.paper.margin);
+    document.documentElement.dataset.pattern = s.paper.pattern;
+    root.setProperty("--note-ink", s.ink);
+    root.setProperty("--letter-w", SIZES[s.letter.size] || SIZES.medium);
+    root.setProperty("--tilt", s.letter.tilt + "deg");
+
+    if (!loadedFonts.has(s.font)) {
+      loadedFonts.add(s.font);
+      document.head.append(el("link", {
+        rel: "stylesheet",
+        href: `https://fonts.googleapis.com/css2?family=${encodeURIComponent(s.font)}&display=swap`,
+      }));
+    }
+    root.setProperty("--note-font", `"${s.font}"`);
+
+    const wrap = $("letter");
+    wrap.dataset.pics = s.pictures.style;
+    for (const side of ["left", "right"]) {
+      const notes = s.notes.filter(n => n.place === side).map(note);
+      const offset = side === "right" ? 6 : 0;
+      $("side-" + side).replaceChildren(...s.pictures[side].map((p, i) => figure(p, i + offset)), ...notes);
+    }
+    $("notes-top").replaceChildren(...s.notes.filter(n => n.place === "top").map(note));
+    $("notes-bottom").replaceChildren(...s.notes.filter(n => n.place === "bottom").map(note));
+
+    $("stickers").replaceChildren(...s.stickers.map(st => {
+      const span = el("span", { textContent: st.emoji });
+      span.style.cssText = `left:${st.x}%; top:${st.y}%; font-size:${st.size}px; --rot:${st.rotate}deg`;
+      return span;
+    }));
+
+    if (s.effect !== lastEffect) {
+      lastEffect = s.effect;
+      const kind = FALLING[s.effect];
+      $("effect").replaceChildren(...(kind ? Array.from({ length: 22 }, (_, i) => {
+        const span = el("span", { textContent: kind.chars[i % kind.chars.length] });
+        const color = kind.colors[i % kind.colors.length];
+        span.style.cssText =
+          `left:${Math.random() * 100}%; font-size:${14 + Math.random() * 18}px;` +
+          `animation-duration:${9 + Math.random() * 10}s; animation-delay:${-Math.random() * 18}s;` +
+          `--drift:${(Math.random() - .5) * 160}px; --spin:${(Math.random() - .5) * 540}deg;` +
+          (color ? `color:${color}; text-shadow:0 1px 2px rgba(0,0,0,.15);` : "");
+        return span;
+      }) : []));
+    }
+
+    if (layout === layoutLetter) requestAnimationFrame(layout);
+    document.fonts.ready.then(() => layout());
+  }
+
+  // ---- talking to the bot's server ---------------------------------------
+
+  async function api(path, body) {
+    const res = await fetch(API + path, {
+      method: body ? "POST" : "GET",
+      headers: { "x-letter-password": password, ...(body ? { "content-type": "application/json" } : {}) },
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || "Something went wrong. Try again.");
+    return data;
+  }
+
+  async function loadSettings() {
+    try {
+      const { settings } = await api("/settings");
+      applySettings(settings);
+      $("bot-open").classList.add("ready");
+    } catch {
+      // Server not reachable: the page still works as it is, just without the bot.
+    }
+  }
+
+  const history = [];
+  const log = $("bot-log");
+  function say(text, kind) {
+    const p = el("p", { className: "msg " + kind, textContent: text });
+    log.append(p);
+    log.scrollTop = log.scrollHeight;
+    return p;
+  }
+
+  let busy = false;
+  async function run(path, body, userText) {
+    if (busy) return;
+    busy = true;
+    for (const b of document.querySelectorAll(".bot button:not(.x)")) b.disabled = true;
+    if (userText) say(userText, "user");
+    const wait = say("…", "bot-msg wait");
+    try {
+      const data = await api(path, body);
+      wait.remove();
+      say(data.reply, "bot-msg");
+      applySettings(data.settings);
+      if (userText) history.push({ role: "user", text: userText }, { role: "assistant", text: data.reply });
+    } catch (e) {
+      wait.remove();
+      say(e.message, "error");
+    } finally {
+      busy = false;
+      for (const b of document.querySelectorAll(".bot button")) b.disabled = false;
+    }
+  }
+
+  function setBot(open) {
+    $("bot").classList.toggle("open", open);
+    $("bot").inert = !open;
+    $("bot-open").setAttribute("aria-expanded", open);
+    $("bot-open").style.visibility = open ? "hidden" : "";
+    if (open) $("bot-input").focus();
+  }
+  $("bot-open").addEventListener("click", () => setBot(true));
+  $("bot-close").addEventListener("click", () => setBot(false));
+  addEventListener("keydown", e => { if (e.key === "Escape") setBot(false); });
+
+  const input = $("bot-input");
+  function send(text) {
+    text = text.trim();
+    if (!text || busy) return;
+    input.value = "";
+    run("/chat", { message: text, history: history.slice(-12) }, text);
+  }
+  $("bot-form").addEventListener("submit", e => { e.preventDefault(); send(input.value); });
+  input.addEventListener("keydown", e => {
+    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(input.value); }
+  });
+  $("bot-ideas").addEventListener("click", e => { if (e.target.matches("button")) send(e.target.textContent); });
+  $("bot-undo").addEventListener("click", () => run("/undo", {}));
+  $("bot-reset").addEventListener("click", () => run("/reset", {}));
+
+  // ---- unlocking ---------------------------------------------------------
+
+  const form = $("form");
+  const pw = $("pw");
+  const btn = $("btn");
+  const err = $("err");
 
   form.addEventListener("submit", async e => {
     e.preventDefault();
@@ -323,6 +738,8 @@
     btn.disabled = true;
     try {
       show(await decrypt(pw.value));
+      password = pw.value.trim();
+      loadSettings();
     } catch {
       err.textContent = "हैन नि, फेरि लेख त।";
       form.classList.remove("shake");

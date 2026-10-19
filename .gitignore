@@ -1,2 +1,5 @@
 letter.jpg
 .DS_Store
+node_modules
+.netlify
+domain/

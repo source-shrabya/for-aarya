@@ -12,6 +12,16 @@ The photo is encrypted with the password, so nobody can see it by viewing the pa
 
 If the new photo is framed differently, the line and margin positions in `layoutLetter()` in `index.html` need updating.
 
+## The decorating bot
+
+After the letter opens, a "सजाउ" button opens a chat. Anyone with the password can ask it to change the page: paper colour and pattern, pictures and how they are framed, handwritten notes, emoji stickers, and things falling down the screen. Changes are saved for everyone. Undo goes back one change, up to 20, and "Back to original" restores the page as I made it.
+
+The bot cannot touch the letter photo or the password. Claude only picks values from a fixed list of settings (`netlify/lib/settings.mjs`), and the server checks every value before saving it.
+
+The page stays on GitHub Pages. The bot's server is one Netlify function (`netlify/functions/customize.mjs`) that checks the password, asks Claude (claude-opus-5-5), and saves the settings in Netlify Blobs. It needs two environment variables on Netlify: `ANTHROPIC_API_KEY` and `SITE_PASSWORD`. If you change the password, run `lock.mjs` and update `SITE_PASSWORD` too.
+
+If the server is down or not set up, the page works as before without the button.
+
 ## Put it online
 
 Upload `index.html`, `letter.js` and the `art` folder. Do not upload `letter.jpg`, because that is the unlocked letter.
