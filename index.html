@@ -151,7 +151,12 @@
     height: auto;
     margin: 0 auto;
     transform: rotate(var(--tilt));
-    box-shadow: var(--sheet-shadow);
+    /* its paper is close to the page colour, so it needs more lift than the letters under it */
+    box-shadow:
+      0 0 0 1px rgba(60, 45, 30, .12),
+      0 4px 10px rgba(40, 30, 20, .3),
+      0 18px 44px rgba(40, 30, 20, .28),
+      0 0 90px 14px rgba(255, 250, 236, .7);
     opacity: 0;
     transition: opacity 1.4s ease;
   }
