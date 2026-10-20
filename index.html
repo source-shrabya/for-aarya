@@ -179,7 +179,13 @@
     transform: translateX(var(--x, 0)) rotate(var(--r, 0deg));
     box-shadow: 0 2px 4px rgba(40, 30, 20, .25), 0 8px 20px rgba(40, 30, 20, .18);
     opacity: 0;
-    transition: opacity .9s ease;
+    transition: opacity .9s ease var(--d, 0s), transform .25s ease, box-shadow .25s ease;
+  }
+  /* Pointer on a picture: lift it above its neighbours so the caption shows */
+  .side figure:hover {
+    z-index: 5;
+    transform: translateX(var(--x, 0)) rotate(0deg) scale(1.08);
+    box-shadow: 0 6px 12px rgba(40, 30, 20, .3), 0 18px 40px rgba(40, 30, 20, .25);
   }
   .side figure:first-child { margin-top: 24px; }
   .side img { display: block; width: 100%; height: auto; }
@@ -208,12 +214,12 @@
   [data-pics="plain"] .side figure { box-shadow: none; }
   [data-pics="plain"] .side figure::before { display: none; }
   .letter.open .side figure { opacity: 1; }
-  .side figure:nth-child(1) { transition-delay: 1.0s; }
-  .side figure:nth-child(2) { transition-delay: 1.3s; }
-  .side figure:nth-child(3) { transition-delay: 1.6s; }
-  .side figure:nth-child(4) { transition-delay: 1.9s; }
-  .side figure:nth-child(5) { transition-delay: 2.2s; }
-  .side figure:nth-child(n+6) { transition-delay: 2.5s; }
+  .side figure:nth-child(1) { --d: 1.0s; }
+  .side figure:nth-child(2) { --d: 1.3s; }
+  .side figure:nth-child(3) { --d: 1.6s; }
+  .side figure:nth-child(4) { --d: 1.9s; }
+  .side figure:nth-child(5) { --d: 2.2s; }
+  .side figure:nth-child(n+6) { --d: 2.5s; }
 
   /* Handwritten notes the bot can add */
   .notes { grid-area: top; display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 48px; padding: 0 24px; }
