@@ -32,11 +32,23 @@ export const DEFAULT_SETTINGS = {
   font: "Kalam",
   letter: { size: "medium", tilt: 0 },
   pictures: {
-    style: "taped",
-    left: ["aslan-lucy", "ladybugs", "sun", "reepicheep", "lamppost", "aslan-sky"]
-      .map(n => ({ src: `art/${n}.jpg`, caption: "" })),
-    right: ["aslan-forest", "sun-colour", "dawn-treader", "ladybug-mushroom", "aslan-sunlit", "sun-swirl"]
-      .map(n => ({ src: `art/${n}.jpg`, caption: "" })),
+    style: "polaroid",
+    left: [
+      { src: "art/aslan-lucy.jpg", caption: "lucy & aslan" },
+      { src: "art/ladybugs.jpg", caption: "lucky bugs" },
+      { src: "art/sun.jpg", caption: "little sun" },
+      { src: "art/reepicheep.jpg", caption: "brave" },
+      { src: "art/lamppost.jpg", caption: "the lamppost" },
+      { src: "art/aslan-sky.jpg", caption: "pink skies" },
+    ],
+    right: [
+      { src: "art/aslan-forest.jpg", caption: "into the woods" },
+      { src: "art/sun-colour.jpg", caption: "all the colours" },
+      { src: "art/dawn-treader.jpg", caption: "the dawn treader" },
+      { src: "art/ladybug-mushroom.jpg", caption: "a tiny visitor" },
+      { src: "art/aslan-sunlit.jpg", caption: "golden" },
+      { src: "art/sun-swirl.jpg", caption: "warm" },
+    ],
   },
   notes: [],
   stickers: [],

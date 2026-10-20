@@ -182,7 +182,7 @@
     transition: opacity .9s ease var(--d, 0s), transform .25s ease, box-shadow .25s ease;
   }
   /* Pointer on a picture: lift it above its neighbours so the caption shows */
-  .side figure:hover {
+  .side figure:hover, .side figure.lift {
     z-index: 5;
     transform: translateX(var(--x, 0)) rotate(0deg) scale(1.08);
     box-shadow: 0 6px 12px rgba(40, 30, 20, .3), 0 18px 40px rgba(40, 30, 20, .25);
@@ -432,24 +432,24 @@
   <p class="error" id="err" role="alert"></p>
 </main>
 
-<div class="letter" id="letter">
+<div class="letter" id="letter" data-pics="polaroid">
   <div class="notes top" id="notes-top"></div>
   <aside class="side left" id="side-left">
-    <figure><img src="art/aslan-lucy.jpg" alt=""></figure>
-    <figure><img src="art/ladybugs.jpg" alt=""></figure>
-    <figure><img src="art/sun.jpg" alt=""></figure>
-    <figure><img src="art/reepicheep.jpg" alt=""></figure>
-    <figure><img src="art/lamppost.jpg" alt=""></figure>
-    <figure><img src="art/aslan-sky.jpg" alt=""></figure>
+    <figure><img src="art/aslan-lucy.jpg" alt="lucy & aslan"><figcaption>lucy & aslan</figcaption></figure>
+    <figure><img src="art/ladybugs.jpg" alt="lucky bugs"><figcaption>lucky bugs</figcaption></figure>
+    <figure><img src="art/sun.jpg" alt="little sun"><figcaption>little sun</figcaption></figure>
+    <figure><img src="art/reepicheep.jpg" alt="brave"><figcaption>brave</figcaption></figure>
+    <figure><img src="art/lamppost.jpg" alt="the lamppost"><figcaption>the lamppost</figcaption></figure>
+    <figure><img src="art/aslan-sky.jpg" alt="pink skies"><figcaption>pink skies</figcaption></figure>
   </aside>
   <img id="img" alt="प्रिय आर्या, a handwritten letter">
   <aside class="side right" id="side-right">
-    <figure><img src="art/aslan-forest.jpg" alt=""></figure>
-    <figure><img src="art/sun-colour.jpg" alt=""></figure>
-    <figure><img src="art/dawn-treader.jpg" alt=""></figure>
-    <figure><img src="art/ladybug-mushroom.jpg" alt=""></figure>
-    <figure><img src="art/aslan-sunlit.jpg" alt=""></figure>
-    <figure><img src="art/sun-swirl.jpg" alt=""></figure>
+    <figure><img src="art/aslan-forest.jpg" alt="into the woods"><figcaption>into the woods</figcaption></figure>
+    <figure><img src="art/sun-colour.jpg" alt="all the colours"><figcaption>all the colours</figcaption></figure>
+    <figure><img src="art/dawn-treader.jpg" alt="the dawn treader"><figcaption>the dawn treader</figcaption></figure>
+    <figure><img src="art/ladybug-mushroom.jpg" alt="a tiny visitor"><figcaption>a tiny visitor</figcaption></figure>
+    <figure><img src="art/aslan-sunlit.jpg" alt="golden"><figcaption>golden</figcaption></figure>
+    <figure><img src="art/sun-swirl.jpg" alt="warm"><figcaption>warm</figcaption></figure>
   </aside>
   <div class="notes bottom" id="notes-bottom"></div>
   <div class="stickers" id="stickers" aria-hidden="true"></div>
@@ -589,6 +589,15 @@
     [...$("side-" + side).children].forEach((f, i) => {
       const j = JITTER[(side === "right" ? i + 6 : i) % JITTER.length];
       f.style.cssText = `--r:${j.r}deg; --x:${j.x}px; --w:${j.w}px; --t:${j.t}deg`;
+    });
+  }
+
+  // On a phone there is no pointer, so a tap lifts the picture instead
+  for (const side of ["left", "right"]) {
+    $("side-" + side).addEventListener("click", e => {
+      const f = e.target.closest("figure");
+      for (const other of document.querySelectorAll(".side figure.lift")) if (other !== f) other.classList.remove("lift");
+      if (f) f.classList.toggle("lift");
     });
   }
 
