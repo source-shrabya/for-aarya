@@ -6,6 +6,10 @@
 //   POST /api/letters {text, photo} -> adds a letter (photo is a base64 JPEG)
 //   GET  /api/letters/<id>/photo    -> that letter's photo
 //   POST /api/letters/<id>/delete   -> removes a letter, only by the one who wrote it
+//   GET  /api/movies          -> our movie list: what we have watched and what we want to
+//   POST /api/movies {title, list}  -> adds a movie to "watched" or "bucket"
+//   POST /api/movies/<id>/watched   -> moves a bucket-list movie to watched
+//   POST /api/movies/<id>/delete    -> removes a movie
 import Anthropic from "@anthropic-ai/sdk";
 import { getStore } from "@netlify/blobs";
 import { createHash, timingSafeEqual } from "node:crypto";
@@ -67,10 +71,27 @@ async function addLetter(store, from, { text, photo }) {
     if (bytes.length > MAX_PHOTO || bytes[0] !== 0xff || bytes[1] !== 0xd8 || bytes[2] !== 0xff) return null;
   }
   if (!text && !bytes) return null;
-  const letter = { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), from, date: new Date().toISOString(), text, photo: Boolean(bytes) };
+  const letter = { id: newId(), from, date: new Date().toISOString(), text, photo: Boolean(bytes) };
   if (bytes) await store.set(`photo-${letter.id}`, bytes);
   await store.setJSON("letters", [letter, ...await lettersIn(store)]);
   return letter;
+}
+
+// Movies: one list. The first time it is read it starts with what we had already
+// watched and planned before the page had a list.
+const STARTING_MOVIES = [
+  ["Narnia", "watched"], ["Men in Love", "watched"], ["Tangled", "watched"], ["Twilight", "watched"],
+  ["Dhurandhar", "watched"], ["Dhurandhar 2", "watched"], ["Palm Springs", "bucket"], ["Avatar", "bucket"],
+];
+const newId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+
+async function moviesIn(store) {
+  const saved = await store.get("movies", { type: "json" });
+  if (saved) return saved;
+  const date = new Date().toISOString();
+  const movies = STARTING_MOVIES.map(([title, list], i) => ({ id: newId() + i, title, list, by: "Shrabya", added: date }));
+  await store.setJSON("movies", movies);
+  return movies;
 }
 
 // Earlier turns are sent as plain text so Claude knows what "make it bigger" refers to.
@@ -120,10 +141,12 @@ export default async (req) => {
   const store = getStore({ name: "love-letter", consistency: "strong" });
   const route = new URL(req.url).pathname.replace(/^\/api\//, "");
   const [, letterId, letterAction] = route.match(/^letters\/([a-z0-9]+)\/(photo|delete)$/) ?? [];
+  const [, movieId, movieAction] = route.match(/^movies\/([a-z0-9]+)\/(watched|delete)$/) ?? [];
 
   try {
     if (req.method === "GET" && route === "settings") return send({ settings: await load(store), me });
 
+    if (req.method === "GET" && route === "movies") return send({ movies: await moviesIn(store) });
     if (req.method === "GET" && route === "letters") return send({ letters: await lettersIn(store) });
     if (req.method === "GET" && letterAction === "photo") {
       const bytes = await store.get(`photo-${letterId}`, { type: "arrayBuffer" });
@@ -136,6 +159,27 @@ export default async (req) => {
       const letter = await addLetter(store, me, await req.json());
       if (!letter) return send({ error: "Write something or add a photo first." }, 400);
       return send({ letter });
+    }
+    if (route === "movies") {
+      const { title, list } = await req.json();
+      const name = typeof title === "string" ? title.trim().slice(0, 120) : "";
+      if (!name) return send({ error: "Write the movie's name first." }, 400);
+      const movie = { id: newId(), title: name, list: list === "watched" ? "watched" : "bucket", by: me, added: new Date().toISOString() };
+      if (movie.list === "watched") movie.watched = movie.added;
+      await store.setJSON("movies", [...await moviesIn(store), movie]);
+      return send({ movie });
+    }
+    if (movieAction) {
+      const movies = await moviesIn(store);
+      const movie = movies.find(m => m.id === movieId);
+      if (!movie) return send({ error: "That movie is not on the list any more." }, 404);
+      if (movieAction === "delete") {
+        await store.setJSON("movies", movies.filter(m => m.id !== movieId));
+        return send({ ok: true });
+      }
+      Object.assign(movie, { list: "watched", watched: new Date().toISOString() });
+      await store.setJSON("movies", movies);
+      return send({ movie });
     }
     if (letterAction === "delete") {
       const letters = await lettersIn(store);

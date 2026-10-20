@@ -289,6 +289,27 @@
     .lock form { gap: 10px; }
   }
 
+  /* Link to our movie list, opposite the bot's button */
+  .movies-link {
+    display: none;
+    position: fixed;
+    left: 20px;
+    bottom: 20px;
+    z-index: 10;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 18px 10px 14px;
+    border-radius: 999px;
+    background: #8c2f3b;
+    color: #f6efe2;
+    font: 400 20px/1 "Kalam", cursive;
+    text-decoration: none;
+    box-shadow: 0 4px 14px rgba(140, 47, 59, .35);
+  }
+  .movies-link.ready { display: inline-flex; }
+  .movies-link svg { width: 20px; height: 20px; }
+  @media (max-width: 600px) { .movies-link { left: 14px; bottom: 14px; } }
+
   /* The decorating bot */
   .bot-open {
     display: none;
@@ -530,6 +551,10 @@
 </section>
 <div class="effect" id="effect" aria-hidden="true"></div>
 
+<a class="movies-link" id="movies-link" href="movies.html">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 4v16M17 4v16M3 9h4M3 15h4M17 9h4M17 15h4"/></svg>
+  फिल्महरू
+</a>
 <button class="bot-open" id="bot-open" type="button" aria-controls="bot" aria-expanded="false">
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
   सजाउ
@@ -773,6 +798,7 @@
       applySettings(settings);
       $("bot-open").classList.add("ready");
       loadLetters();
+      $("movies-link").classList.add("ready");
     } catch {
       // Server not reachable: the page still works as it is, just without the bot.
     }
@@ -888,8 +914,12 @@
   }
 
   // Pick up letters the other one has written without a reload
-  setInterval(() => { if (!$("letters").hidden && !document.hidden) loadLetters(); }, 60000);
-  document.addEventListener("visibilitychange", () => { if (!document.hidden && !$("letters").hidden) loadLetters(); });
+  function refresh() {
+    if (document.hidden || $("letters").hidden) return;
+    loadLetters();
+  }
+  setInterval(refresh, 60000);
+  document.addEventListener("visibilitychange", refresh);
 
   // Phone photos are large: shrink to 2000px on the long side as a JPEG before sending.
   async function shrink(file) {
@@ -961,14 +991,27 @@
   const btn = $("btn");
   const err = $("err");
 
+  // The password is kept until the tab closes, so the movies page and coming back here need it only once
+  const remember = {
+    get: () => { try { return sessionStorage.getItem("letter-password") ?? ""; } catch { return ""; } },
+    set: v => { try { sessionStorage.setItem("letter-password", v); } catch { /* private window: ask again next time */ } },
+  };
+
+  async function unlock(pass) {
+    show(await decrypt(pass));
+    password = pass.trim();
+    remember.set(password);
+    loadSettings();
+  }
+
+  if (remember.get()) unlock(remember.get()).catch(() => remember.set(""));
+
   form.addEventListener("submit", async e => {
     e.preventDefault();
     err.textContent = "";
     btn.disabled = true;
     try {
-      show(await decrypt(pw.value));
-      password = pw.value.trim();
-      loadSettings();
+      await unlock(pw.value);
     } catch {
       err.textContent = "हैन नि, फेरि लेख त।";
       form.classList.remove("shake");

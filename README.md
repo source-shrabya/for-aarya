@@ -28,9 +28,15 @@ The letters we write each other sit under my first letter, oldest first, each on
 
 Letters and their photos are kept in Netlify Blobs, next to the bot's settings, and every request needs one of the two passwords. Photos are shrunk to 2000 pixels on the long side before they are sent.
 
+## Our movies
+
+The "फिल्महरू" button at the bottom left of the letter page goes to `movies.html`, a page of its own with two lists: movies we have watched and movies we want to watch. Either of us can add a movie to either list, tick a bucket-list movie as watched (it moves over with the date), or remove one. The list started with the movies we had already written down.
+
+The password is kept in the browser tab after the letter opens, so going to the movies page and back does not ask for it again. Closing the tab forgets it.
+
 ## Put it online
 
-Upload `index.html`, `letter.js` and the `art` folder. Do not upload `letter.jpg`, because that is the unlocked letter.
+Upload `index.html`, `movies.html`, `letter.js` and the `art` folder. Do not upload `letter.jpg`, because that is the unlocked letter.
 
 The quickest way is Netlify Drop (app.netlify.com/drop): make a folder with only those three things and drag it onto the page.
 

@@ -1,0 +1,281 @@
+<!doctype html>
+<html lang="ne">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>हाम्रा फिल्महरू</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Kalam:wght@300;400&display=swap" rel="stylesheet">
+<style>
+  /* The same notebook paper as the letter page, without the bot's settings */
+  :root {
+    --paper: #c3b9a7;
+    --rule: color-mix(in srgb, #5c6876 55%, transparent);
+    --margin: color-mix(in srgb, #c47868 70%, transparent);
+    --ink: #1d2a50;
+    --note-font: "Kalam";
+    --gap: 44px;
+    --sheet-shadow: 0 2px 6px rgba(40, 30, 20, .2), 0 10px 26px rgba(40, 30, 20, .14), 0 0 60px rgba(255, 248, 230, .45);
+  }
+  * { box-sizing: border-box; }
+  html {
+    min-height: 100%;
+    background-color: var(--paper);
+    background-image:
+      linear-gradient(to right, transparent 119px, var(--margin) 119px, var(--margin) 121px, transparent 121px),
+      linear-gradient(to bottom, transparent calc(var(--gap) - 2px), var(--rule) calc(var(--gap) - 2px), var(--rule) var(--gap));
+    background-size: 100% 100%, 100% var(--gap);
+    background-repeat: no-repeat, repeat;
+  }
+  body {
+    margin: 0;
+    min-height: 100dvh;
+    color: var(--ink);
+    font: 300 24px/var(--gap) "Kalam", "Comic Sans MS", cursive;
+    overflow-x: hidden;
+  }
+  .back {
+    position: fixed;
+    left: 20px;
+    bottom: 20px;
+    z-index: 10;
+    padding: 10px 18px;
+    border-radius: 999px;
+    background: #8c2f3b;
+    color: #f6efe2;
+    font: 400 20px/1 "Kalam", cursive;
+    text-decoration: none;
+    box-shadow: 0 4px 14px rgba(140, 47, 59, .35);
+  }
+  /* Asked only when the letter page was not opened first in this tab */
+  .lock { padding: var(--gap) 24px 0 140px; }
+  .lock[hidden] { display: none; }
+  .lock p, .lock form { margin: 0; }
+  .lock form { display: flex; align-items: center; gap: 14px; }
+  .lock input, .lock button {
+    font: inherit;
+    font-weight: 400;
+    color: var(--ink);
+    background: transparent;
+    border: 0;
+    outline: none;
+    height: var(--gap);
+  }
+  .lock input { width: 220px; letter-spacing: 2px; }
+  .lock button { cursor: pointer; text-decoration: underline; text-underline-offset: 6px; }
+  .lock .error { color: #8c2f3b; min-height: var(--gap); }
+  .lined {
+    font: 400 24px/40px var(--note-font), "Kalam", cursive;
+    color: var(--ink);
+    background: #f7f2e7 repeating-linear-gradient(to bottom, transparent 0 39px, rgba(92, 104, 118, .4) 39px 40px);
+    background-position: 0 14px;
+    padding: 14px 28px 20px;
+  }
+  .movies {
+    width: min(900px, 94vw);
+    margin: 0 auto;
+    padding: 40px 0 120px;
+  }
+  .movies[hidden] { display: none; }
+  .movies h2 { margin: 0 0 24px; text-align: center; font: 400 34px/1.2 "Kalam", cursive; color: var(--ink); }
+  .movie-lists { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; align-items: start; }
+  .movie-list { box-shadow: var(--sheet-shadow); }
+  .movie-list h3 { margin: 0; font: inherit; font-weight: 400; color: #8c2f3b; }
+  .movie-list ul { list-style: none; margin: 0; padding: 0; }
+  .movie-list li { display: flex; align-items: baseline; gap: 10px; }
+  .movie-list .title { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+  .movie-list .by { font: 13px/1 system-ui, -apple-system, "Segoe UI", sans-serif; color: #888; white-space: nowrap; }
+  .movie-list li button {
+    border: 0;
+    background: none;
+    padding: 0 2px;
+    color: #777;
+    font: 15px/1 system-ui, -apple-system, "Segoe UI", sans-serif;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .movie-list li button.seen { color: #2f6b3a; }
+  .movie-list .none { color: #888; }
+  .movie-add { display: flex; gap: 8px; align-items: center; }
+  .movie-add input {
+    flex: 1;
+    min-width: 0;
+    height: 40px;
+    border: 0;
+    background: transparent;
+    font: inherit;
+    color: var(--ink);
+    outline: none;
+  }
+  .movie-add input::placeholder { color: #9a9a9a; }
+  .movie-add button {
+    border: 0;
+    border-radius: 999px;
+    padding: 2px 14px;
+    background: #8c2f3b;
+    color: #f6efe2;
+    font: 400 18px/1.4 "Kalam", cursive;
+    cursor: pointer;
+  }
+  .movie-add .error { color: #7a1f1f; font: 14px/1.3 system-ui, sans-serif; }
+  @media (max-width: 700px) {
+    .movie-lists { grid-template-columns: 1fr; }
+    .movies { width: 100vw; padding: 24px 10px 100px; }
+  }
+
+  @media (max-width: 600px) {
+    body { font-size: 21px; }
+    .lock { padding-left: 24px; }
+    .lined { font-size: 21px; padding: 14px 16px 20px; }
+    .back { left: 14px; bottom: 14px; }
+  }
+</style>
+</head>
+<body>
+
+<section class="lock" id="lock" hidden>
+  <p>हाम्रा फिल्महरू हेर्न password:</p>
+  <form id="form" autocomplete="off">
+    <input id="pw" type="password" placeholder="..........." aria-label="Password">
+    <button id="btn" type="submit">खोल</button>
+  </form>
+  <p class="error" id="err" role="alert"></p>
+</section>
+
+<main class="movies" id="movies" hidden>
+  <h2>हाम्रा फिल्महरू</h2>
+  <div class="movie-lists">
+    <div class="movie-list lined">
+      <h3>हेरिसकेका</h3>
+      <ul id="movies-watched"></ul>
+      <form class="movie-add" data-list="watched">
+        <input maxlength="120" placeholder="a movie we watched" aria-label="Add a movie we watched">
+        <button type="submit">थप</button>
+      </form>
+    </div>
+    <div class="movie-list lined">
+      <h3>हेर्न बाँकी</h3>
+      <ul id="movies-bucket"></ul>
+      <form class="movie-add" data-list="bucket">
+        <input maxlength="120" placeholder="a movie to watch together" aria-label="Add a movie to watch">
+        <button type="submit">थप</button>
+      </form>
+    </div>
+  </div>
+</main>
+<a class="back" href="./">← चिठी</a>
+
+<script>
+  const API = "https://for-aarya-bot.netlify.app/api";
+  const $ = id => document.getElementById(id);
+  const remember = {
+    get: () => { try { return sessionStorage.getItem("letter-password") ?? ""; } catch { return ""; } },
+    set: v => { try { sessionStorage.setItem("letter-password", v); } catch { /* private window */ } },
+  };
+  let password = remember.get();
+
+  function el(tag, props = {}, kids = []) {
+    const node = Object.assign(document.createElement(tag), props);
+    node.append(...kids);
+    return node;
+  }
+
+  async function api(path, body) {
+    const res = await fetch(API + path, {
+      method: body ? "POST" : "GET",
+      headers: { "x-letter-password": password, ...(body ? { "content-type": "application/json" } : {}) },
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw Object.assign(new Error(data.error || "Something went wrong. Try again."), { status: res.status });
+    return data;
+  }
+
+  const shortDate = iso => new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+
+  function movieItem(m) {
+    const by = m.list === "watched" && m.watched ? shortDate(m.watched) : `added by ${m.by}`;
+    const li = el("li", {}, [el("span", { className: "title", textContent: m.title }), el("span", { className: "by", textContent: by })]);
+    if (m.list === "bucket") {
+      const seen = el("button", { type: "button", className: "seen", textContent: "✓ watched", title: "We watched it" });
+      seen.addEventListener("click", async () => {
+        seen.disabled = true;
+        try { await api(`/movies/${m.id}/watched`, {}); loadMovies(); }
+        catch { seen.disabled = false; }
+      });
+      li.append(seen);
+    }
+    // two clicks, like removing a letter
+    const remove = el("button", { type: "button", textContent: "×" });
+    remove.setAttribute("aria-label", `Remove ${m.title}`);
+    remove.addEventListener("click", async () => {
+      if (remove.textContent === "×") { remove.textContent = "remove?"; return; }
+      remove.disabled = true;
+      try { await api(`/movies/${m.id}/delete`, {}); li.remove(); }
+      catch { remove.disabled = false; }
+    });
+    li.append(remove);
+    return li;
+  }
+
+  async function loadMovies() {
+    try {
+      const { movies } = await api("/movies");
+      for (const list of ["watched", "bucket"]) {
+        const items = movies.filter(m => m.list === list).map(movieItem);
+        $("movies-" + list).replaceChildren(...(items.length ? items : [el("li", { className: "none", textContent: "nothing yet" })]));
+      }
+      $("movies").hidden = false;
+      $("lock").hidden = true;
+      return true;
+    } catch (e) {
+      if (e.status === 401) {
+        remember.set("");
+        $("movies").hidden = true;
+        $("lock").hidden = false;
+        $("pw").focus();
+      }
+      return false;
+    }
+  }
+
+  for (const form of document.querySelectorAll(".movie-add")) {
+    form.addEventListener("submit", async e => {
+      e.preventDefault();
+      const input = form.querySelector("input");
+      const title = input.value.trim();
+      if (!title) return;
+      form.querySelector(".error")?.remove();
+      input.disabled = true;
+      try {
+        await api("/movies", { title, list: form.dataset.list });
+        input.value = "";
+        loadMovies();
+      } catch (err) {
+        form.append(el("span", { className: "error", textContent: err.message }));
+      } finally {
+        input.disabled = false;
+        input.focus();
+      }
+    });
+  }
+
+  $("form").addEventListener("submit", async e => {
+    e.preventDefault();
+    password = $("pw").value.trim();
+    $("err").textContent = "";
+    if (await loadMovies()) remember.set(password);
+    else $("err").textContent = "हैन नि, फेरि लेख त।";
+  });
+
+  // Pick up what the other one adds without a reload
+  setInterval(() => { if (!document.hidden && !$("movies").hidden) loadMovies(); }, 60000);
+  document.addEventListener("visibilitychange", () => { if (!document.hidden && !$("movies").hidden) loadMovies(); });
+
+  if (password) loadMovies();
+  else { $("lock").hidden = false; $("pw").focus(); }
+</script>
+</body>
+</html>
