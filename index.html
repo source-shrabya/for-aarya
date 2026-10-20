@@ -411,62 +411,26 @@
     .bot-open { right: 14px; bottom: 14px; }
   }
 
-  /* Letters we write each other, in a drawer on the left */
-  .letters-open {
-    display: none;
-    position: fixed;
-    left: 20px;
-    bottom: 20px;
-    z-index: 10;
-    align-items: center;
-    gap: 8px;
-    padding: 10px 18px 10px 14px;
-    border: 0;
-    border-radius: 999px;
-    background: #8c2f3b;
-    color: #f6efe2;
-    font: 400 20px/1 "Kalam", cursive;
-    box-shadow: 0 4px 14px rgba(140, 47, 59, .35);
-    cursor: pointer;
-  }
-  .letters-open.ready { display: inline-flex; }
-  .letters-open svg { width: 20px; height: 20px; }
+  /* Letters we write each other, one after another under the first one */
   .letters {
-    position: fixed;
-    top: 0;
-    left: 0;
-    bottom: 0;
-    z-index: 11;
-    width: min(520px, 100vw);
+    width: min(var(--letter-w), 94vw);
+    margin: 0 auto;
+    padding: 24px 0 120px;
     display: flex;
     flex-direction: column;
-    background: #f3ede1;
-    color: #2a2a2a;
-    border-right: 1px solid rgba(0, 0, 0, .12);
-    box-shadow: 8px 0 30px rgba(40, 30, 20, .2);
-    font: 16px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif;
-    transform: translateX(-105%);
-    transition: transform .3s ease;
+    gap: 48px;
   }
-  .letters.open { transform: none; }
-  .letters header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 14px 16px;
-    border-bottom: 1px solid rgba(0, 0, 0, .1);
-  }
-  .letters h2 { margin: 0; font: 400 22px/1.2 "Kalam", cursive; color: #8c2f3b; }
-  .letters .x { border: 0; background: none; font-size: 26px; line-height: 1; cursor: pointer; color: #555; padding: 4px 8px; }
-  .letters-body { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 18px; }
+  .letters[hidden] { display: none; }
+  .letters #letters-list { display: flex; flex-direction: column; gap: 48px; }
   .letters .write, .letters .send {
-    align-self: flex-start;
+    align-self: center;
     border: 0;
-    border-radius: 12px;
-    padding: 8px 16px;
+    border-radius: 999px;
+    padding: 10px 22px;
     background: #8c2f3b;
     color: #f6efe2;
-    font: 400 19px/1.2 "Kalam", cursive;
+    font: 400 22px/1.2 "Kalam", cursive;
+    box-shadow: 0 4px 14px rgba(140, 47, 59, .3);
     cursor: pointer;
   }
   .letters .plain {
@@ -475,47 +439,47 @@
     color: #555;
     text-decoration: underline;
     text-underline-offset: 3px;
-    font: inherit;
-    font-size: 14px;
+    font: 15px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif;
     cursor: pointer;
     padding: 4px 0;
   }
   .letters button:disabled { opacity: .5; cursor: default; }
-  .letter-form { display: flex; flex-direction: column; gap: 10px; }
+  .letter-form { display: flex; flex-direction: column; gap: 12px; font: 16px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; color: #333; }
   .letter-form[hidden] { display: none; }
-  .letter-form .buttons { display: flex; align-items: center; gap: 16px; }
-  .letter-form .hint { margin: 0; font-size: 14px; color: #666; }
-  .letter-form img { max-width: 100%; border-radius: 4px; }
-  .letter-form .error { margin: 0; color: #7a1f1f; font-size: 14px; }
-  /* Lined paper for typed letters, in the form and in the list */
+  .letter-form .buttons { display: flex; align-items: center; justify-content: center; gap: 20px; }
+  .letter-form .hint { margin: 0; }
+  .letter-form img { max-width: 100%; }
+  .letter-form .error { margin: 0; color: #7a1f1f; min-height: 1.45em; }
+  /* A sheet of lined paper for typed letters */
   .lined {
-    font: 400 20px/32px var(--note-font), "Kalam", cursive;
+    font: 400 24px/40px var(--note-font), "Kalam", cursive;
     color: var(--ink);
-    background: #fbf8f1 repeating-linear-gradient(to bottom, transparent 0 31px, rgba(92, 104, 118, .35) 31px 32px);
-    background-position: 0 6px;
-    padding: 6px 14px 10px;
+    background: #f7f2e7 repeating-linear-gradient(to bottom, transparent 0 39px, rgba(92, 104, 118, .4) 39px 40px);
+    background-position: 0 14px;
+    padding: 14px 28px 20px;
   }
-  .letter-form textarea { min-height: 260px; resize: vertical; border: 1px solid rgba(0, 0, 0, .15); border-radius: 4px; }
-  .mail { background: #fbf8f1; box-shadow: 0 2px 6px rgba(40, 30, 20, .15); }
-  .mail .head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; padding: 10px 14px 0; font-size: 14px; color: #666; }
-  .mail .text { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; box-shadow: none; }
-  .mail img { display: block; width: 100%; height: auto; min-height: 80px; padding: 8px; cursor: zoom-in; }
-  .letters .empty { margin: 0; color: #666; }
+  .letter-form textarea { min-height: 420px; resize: vertical; border: 0; box-shadow: 0 2px 6px rgba(40, 30, 20, .2), 0 10px 26px rgba(40, 30, 20, .14); }
+  .mail { box-shadow: 0 2px 6px rgba(40, 30, 20, .2), 0 10px 26px rgba(40, 30, 20, .14); background: #f7f2e7; }
+  .mail .head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 8px;
+    padding: 12px 28px 0;
+    font: 15px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif;
+    color: #666;
+  }
+  .mail .text { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .mail img { display: block; width: 100%; height: auto; min-height: 120px; padding: 12px; cursor: zoom-in; }
+  .letters .empty { margin: 0; text-align: center; font: 16px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; color: #555; }
   @media (max-width: 600px) {
-    .letters {
-      top: auto;
-      height: 85dvh;
-      width: 100vw;
-      border-right: 0;
-      border-top: 1px solid rgba(0, 0, 0, .12);
-      border-radius: 18px 18px 0 0;
-      transform: translateY(105%);
-    }
-    .letters-open { left: 14px; bottom: 14px; }
+    .letters { width: 100vw; padding: 16px 10px 100px; }
+    .lined { font-size: 21px; padding: 14px 16px 20px; }
+    .mail .head { padding: 10px 16px 0; }
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .letter #img, .side figure, .bot, .letters { transition: none; }
+    .letter #img, .side figure, .bot { transition: none; }
     .shake { animation: none; }
     .effect { display: none; }
   }
@@ -557,6 +521,21 @@
   <div class="notes bottom" id="notes-bottom"></div>
   <div class="stickers" id="stickers" aria-hidden="true"></div>
 </div>
+<section class="letters" id="letters" aria-label="Our letters" hidden>
+  <div id="letters-list" aria-live="polite"></div>
+  <button class="write" id="letters-write" type="button">नयाँ चिठी लेख</button>
+  <form class="letter-form" id="letter-form" hidden>
+    <textarea class="lined" id="letter-text" placeholder="प्रिय ..." aria-label="Your letter"></textarea>
+    <p class="hint">or add a photo of one written on paper:</p>
+    <input id="letter-photo" type="file" accept="image/*" aria-label="Photo of a letter">
+    <img id="letter-preview" alt="" hidden>
+    <p class="error" id="letter-err" role="alert"></p>
+    <div class="buttons">
+      <button class="send" id="letter-send" type="submit">पठाउ</button>
+      <button class="plain" id="letter-cancel" type="button">Cancel</button>
+    </div>
+  </form>
+</section>
 <div class="effect" id="effect" aria-hidden="true"></div>
 
 <button class="bot-open" id="bot-open" type="button" aria-controls="bot" aria-expanded="false">
@@ -587,31 +566,7 @@
   </footer>
 </section>
 
-<button class="letters-open" id="letters-open" type="button" aria-controls="letters" aria-expanded="false">
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>
-  चिठीहरू
-</button>
-<section class="letters" id="letters" aria-label="Our letters" inert>
-  <header>
-    <h2>हाम्रा चिठीहरू</h2>
-    <button class="x" id="letters-close" type="button" aria-label="Close">×</button>
-  </header>
-  <div class="letters-body">
-    <button class="write" id="letters-write" type="button">नयाँ चिठी लेख</button>
-    <form class="letter-form" id="letter-form" hidden>
-      <textarea class="lined" id="letter-text" placeholder="प्रिय ..." aria-label="Your letter"></textarea>
-      <p class="hint">or add a photo of one written on paper:</p>
-      <input id="letter-photo" type="file" accept="image/*" aria-label="Photo of a letter">
-      <img id="letter-preview" alt="" hidden>
-      <p class="error" id="letter-err" role="alert"></p>
-      <div class="buttons">
-        <button class="send" id="letter-send" type="submit">पठाउ</button>
-        <button class="plain" id="letter-cancel" type="button">Cancel</button>
-      </div>
-    </form>
-    <div id="letters-list" aria-live="polite"></div>
-  </div>
-</section>
+
 
 <script src="letter.js"></script>
 <script>
@@ -825,7 +780,7 @@
       me = who ?? "";
       applySettings(settings);
       $("bot-open").classList.add("ready");
-      $("letters-open").classList.add("ready");
+      loadLetters();
     } catch {
       // Server not reachable: the page still works as it is, just without the bot.
     }
@@ -871,7 +826,7 @@
   }
   $("bot-open").addEventListener("click", () => setBot(true));
   $("bot-close").addEventListener("click", () => setBot(false));
-  addEventListener("keydown", e => { if (e.key === "Escape") { setBot(false); setLetters(false); } });
+  addEventListener("keydown", e => { if (e.key === "Escape") setBot(false); });
 
   const input = $("bot-input");
   function send(text) {
@@ -888,7 +843,7 @@
   $("bot-undo").addEventListener("click", () => run("/undo", {}));
   $("bot-reset").addEventListener("click", () => run("/reset", {}));
 
-  // ---- our letters --------------------------------------------------------
+  // ---- our letters, under the first one ------------------------------------
 
   const photoUrls = new Map();  // letter id -> object URL, so photos load once
   async function photoUrl(id) {
@@ -932,21 +887,13 @@
     const list = $("letters-list");
     try {
       const { letters } = await api("/letters");
-      list.replaceChildren(...(letters.length ? letters.map(mail) : [el("p", { className: "empty", textContent: "No letters yet. Write the first one." })]));
+      // the server keeps them newest first; on the page they follow the first letter in order
+      list.replaceChildren(...letters.reverse().map(mail));
+      $("letters").hidden = false;
     } catch (e) {
       list.replaceChildren(el("p", { className: "empty", textContent: e.message }));
     }
   }
-
-  function setLetters(open) {
-    $("letters").classList.toggle("open", open);
-    $("letters").inert = !open;
-    $("letters-open").setAttribute("aria-expanded", open);
-    $("letters-open").style.visibility = open ? "hidden" : "";
-    if (open) loadLetters();
-  }
-  $("letters-open").addEventListener("click", () => setLetters(true));
-  $("letters-close").addEventListener("click", () => setLetters(false));
 
   // Phone photos are large: shrink to 2000px on the long side as a JPEG before sending.
   async function shrink(file) {
@@ -968,7 +915,10 @@
   function showForm(open) {
     letterForm.hidden = !open;
     $("letters-write").hidden = open;
-    if (open) $("letter-text").focus();
+    if (open) {
+      letterForm.scrollIntoView({ behavior: "smooth", block: "start" });
+      $("letter-text").focus({ preventScroll: true });
+    }
     else {
       letterForm.reset();
       photo = "";

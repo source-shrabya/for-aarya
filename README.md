@@ -24,7 +24,7 @@ If the server is down or not set up, the page works as before without the button
 
 ## Our letters
 
-A "चिठीहरू" button at the bottom left opens a drawer with the letters we have written each other, newest first. Either of us can write one: type it, add a photo of a letter written on paper, or both. The server knows who wrote it from the password, so each letter is signed without asking. Only the one who wrote a letter can remove it.
+The letters we write each other sit under my first letter, oldest first, each on its own sheet of lined paper. A "नयाँ चिठी लेख" button under the last one opens the writing box. Either of us can write one: type it, add a photo of a letter written on paper, or both. The server knows who wrote it from the password, so each letter is signed without asking. Only the one who wrote a letter can remove it.
 
 Letters and their photos are kept in Netlify Blobs, next to the bot's settings, and every request needs one of the two passwords. Photos are shrunk to 2000 pixels on the long side before they are sent.
 
