@@ -7,7 +7,7 @@ The photo is encrypted with the password, so nobody can see it by viewing the pa
 ## Change the photo or password
 
 1. Replace `letter.jpg` with the new photo.
-2. Run `node lock.mjs "the password"` in this folder. This rewrites `letter.js`.
+2. Run `node lock.mjs "Aarya's password" "my password"` in this folder. This rewrites `letter.js` so either password opens the letter.
 3. Open `index.html` to check it.
 
 If the new photo is framed differently, the line and margin positions in `layoutLetter()` in `index.html` need updating.
@@ -18,9 +18,15 @@ After the letter opens, a "सजाउ" button opens a chat. Anyone with the pa
 
 The bot cannot touch the letter photo or the password. Claude only picks values from a fixed list of settings (`netlify/lib/settings.mjs`), and the server checks every value before saving it.
 
-The page stays on GitHub Pages. The bot's server is one Netlify function (`netlify/functions/customize.mjs`) that checks the password, asks Claude (claude-opus-5-5), and saves the settings in Netlify Blobs. It needs two environment variables on Netlify: `ANTHROPIC_API_KEY` and `SITE_PASSWORD`. If you change the password, run `lock.mjs` and update `SITE_PASSWORD` too.
+The page stays on GitHub Pages. The bot's server is one Netlify function (`netlify/functions/customize.mjs`) that checks the password, asks Claude (claude-opus-5-5), and saves the settings in Netlify Blobs. It needs three environment variables on Netlify: `ANTHROPIC_API_KEY`, `SITE_PASSWORD` (Aarya's password) and `SHRABYA_PASSWORD` (mine). If either password changes, run `lock.mjs` with both and update the Netlify variable too.
 
 If the server is down or not set up, the page works as before without the button.
+
+## Our letters
+
+A "चिठीहरू" button at the bottom left opens a drawer with the letters we have written each other, newest first. Either of us can write one: type it, add a photo of a letter written on paper, or both. The server knows who wrote it from the password, so each letter is signed without asking. Only the one who wrote a letter can remove it.
+
+Letters and their photos are kept in Netlify Blobs, next to the bot's settings, and every request needs one of the two passwords. Photos are shrunk to 2000 pixels on the long side before they are sent.
 
 ## Put it online
 

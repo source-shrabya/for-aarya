@@ -1,7 +1,11 @@
-// The bot's server. Everything needs the page password.
-//   GET  /api/settings        -> current settings
+// The bot's server. Everything needs one of the two passwords, which also says who is asking.
+//   GET  /api/settings        -> current settings, and who is asking
 //   POST /api/chat {message, history} -> asks Claude, saves the result, returns {reply, settings}
 //   POST /api/undo, /api/reset
+//   GET  /api/letters         -> the letters we have written each other, newest first
+//   POST /api/letters {text, photo} -> adds a letter (photo is a base64 JPEG)
+//   GET  /api/letters/<id>/photo    -> that letter's photo
+//   POST /api/letters/<id>/delete   -> removes a letter, only by the one who wrote it
 import Anthropic from "@anthropic-ai/sdk";
 import { getStore } from "@netlify/blobs";
 import { createHash, timingSafeEqual } from "node:crypto";
@@ -9,6 +13,8 @@ import { DEFAULT_SETTINGS, RESPONSE_SCHEMA, SYSTEM_PROMPT, applyChanges, sanitiz
 
 const ALLOWED_ORIGINS = ["https://source-shrabya.github.io"];
 const HISTORY_LIMIT = 20;   // versions kept for undo
+const MAX_TEXT = 20000;     // characters in a typed letter
+const MAX_PHOTO = 4 << 20;  // bytes in a letter photo
 const client = new Anthropic(); // reads ANTHROPIC_API_KEY
 
 const cors = origin => ({
@@ -19,9 +25,15 @@ const cors = origin => ({
 });
 
 const sha = s => createHash("sha256").update(s).digest();
-function passwordOk(given) {
-  const real = process.env.SITE_PASSWORD;
-  return Boolean(real) && typeof given === "string" && timingSafeEqual(sha(given.trim()), sha(real));
+// SITE_PASSWORD is the one Aarya has always used. SHRABYA_PASSWORD is mine.
+const PASSWORDS = { Aarya: "SITE_PASSWORD", Shrabya: "SHRABYA_PASSWORD" };
+function whoIs(given) {
+  if (typeof given !== "string") return null;
+  for (const [name, env] of Object.entries(PASSWORDS)) {
+    const real = process.env[env];
+    if (real && timingSafeEqual(sha(given.trim()), sha(real))) return name;
+  }
+  return null;
 }
 
 async function load(store) {
@@ -41,6 +53,24 @@ async function undo(store) {
   await store.setJSON("history", history);
   await store.setJSON("settings", previous);
   return sanitize(previous);
+}
+
+// Letters: one list with the text and details, and each photo stored on its own.
+const lettersIn = async store => (await store.get("letters", { type: "json" })) ?? [];
+
+async function addLetter(store, from, { text, photo }) {
+  text = typeof text === "string" ? text.trim().slice(0, MAX_TEXT) : "";
+  let bytes = null;
+  if (typeof photo === "string" && photo) {
+    bytes = Buffer.from(photo, "base64");
+    // JPEG files start FF D8 FF
+    if (bytes.length > MAX_PHOTO || bytes[0] !== 0xff || bytes[1] !== 0xd8 || bytes[2] !== 0xff) return null;
+  }
+  if (!text && !bytes) return null;
+  const letter = { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), from, date: new Date().toISOString(), text, photo: Boolean(bytes) };
+  if (bytes) await store.set(`photo-${letter.id}`, bytes);
+  await store.setJSON("letters", [letter, ...await lettersIn(store)]);
+  return letter;
 }
 
 // Earlier turns are sent as plain text so Claude knows what "make it bigger" refers to.
@@ -83,14 +113,38 @@ export default async (req) => {
   const send = (body, status = 200) => new Response(JSON.stringify(body), { status, headers });
 
   if (req.method === "OPTIONS") return new Response(null, { status: 204, headers });
-  if (!passwordOk(req.headers.get("x-letter-password"))) return send({ error: "wrong password" }, 401);
+  const me = whoIs(req.headers.get("x-letter-password"));
+  if (!me) return send({ error: "wrong password" }, 401);
 
   const store = getStore("love-letter");
   const route = new URL(req.url).pathname.replace(/^\/api\//, "");
+  const [, letterId, letterAction] = route.match(/^letters\/([a-z0-9]+)\/(photo|delete)$/) ?? [];
 
   try {
-    if (req.method === "GET" && route === "settings") return send({ settings: await load(store) });
+    if (req.method === "GET" && route === "settings") return send({ settings: await load(store), me });
+
+    if (req.method === "GET" && route === "letters") return send({ letters: await lettersIn(store) });
+    if (req.method === "GET" && letterAction === "photo") {
+      const bytes = await store.get(`photo-${letterId}`, { type: "arrayBuffer" });
+      if (!bytes) return send({ error: "not found" }, 404);
+      return new Response(bytes, { headers: { ...cors(origin), "Content-Type": "image/jpeg", "Cache-Control": "private, max-age=31536000" } });
+    }
     if (req.method !== "POST") return send({ error: "not found" }, 404);
+
+    if (route === "letters") {
+      const letter = await addLetter(store, me, await req.json());
+      if (!letter) return send({ error: "Write something or add a photo first." }, 400);
+      return send({ letter });
+    }
+    if (letterAction === "delete") {
+      const letters = await lettersIn(store);
+      const letter = letters.find(l => l.id === letterId);
+      if (!letter) return send({ error: "That letter is already gone." }, 404);
+      if (letter.from !== me) return send({ error: "Only the one who wrote it can remove it." }, 403);
+      await store.setJSON("letters", letters.filter(l => l.id !== letterId));
+      if (letter.photo) await store.delete(`photo-${letterId}`);
+      return send({ ok: true });
+    }
 
     if (route === "undo") {
       const previous = await undo(store);

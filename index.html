@@ -411,8 +411,111 @@
     .bot-open { right: 14px; bottom: 14px; }
   }
 
+  /* Letters we write each other, in a drawer on the left */
+  .letters-open {
+    display: none;
+    position: fixed;
+    left: 20px;
+    bottom: 20px;
+    z-index: 10;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 18px 10px 14px;
+    border: 0;
+    border-radius: 999px;
+    background: #8c2f3b;
+    color: #f6efe2;
+    font: 400 20px/1 "Kalam", cursive;
+    box-shadow: 0 4px 14px rgba(140, 47, 59, .35);
+    cursor: pointer;
+  }
+  .letters-open.ready { display: inline-flex; }
+  .letters-open svg { width: 20px; height: 20px; }
+  .letters {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    z-index: 11;
+    width: min(520px, 100vw);
+    display: flex;
+    flex-direction: column;
+    background: #f3ede1;
+    color: #2a2a2a;
+    border-right: 1px solid rgba(0, 0, 0, .12);
+    box-shadow: 8px 0 30px rgba(40, 30, 20, .2);
+    font: 16px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif;
+    transform: translateX(-105%);
+    transition: transform .3s ease;
+  }
+  .letters.open { transform: none; }
+  .letters header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px;
+    border-bottom: 1px solid rgba(0, 0, 0, .1);
+  }
+  .letters h2 { margin: 0; font: 400 22px/1.2 "Kalam", cursive; color: #8c2f3b; }
+  .letters .x { border: 0; background: none; font-size: 26px; line-height: 1; cursor: pointer; color: #555; padding: 4px 8px; }
+  .letters-body { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 18px; }
+  .letters .write, .letters .send {
+    align-self: flex-start;
+    border: 0;
+    border-radius: 12px;
+    padding: 8px 16px;
+    background: #8c2f3b;
+    color: #f6efe2;
+    font: 400 19px/1.2 "Kalam", cursive;
+    cursor: pointer;
+  }
+  .letters .plain {
+    border: 0;
+    background: none;
+    color: #555;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    font: inherit;
+    font-size: 14px;
+    cursor: pointer;
+    padding: 4px 0;
+  }
+  .letters button:disabled { opacity: .5; cursor: default; }
+  .letter-form { display: flex; flex-direction: column; gap: 10px; }
+  .letter-form[hidden] { display: none; }
+  .letter-form .buttons { display: flex; align-items: center; gap: 16px; }
+  .letter-form .hint { margin: 0; font-size: 14px; color: #666; }
+  .letter-form img { max-width: 100%; border-radius: 4px; }
+  .letter-form .error { margin: 0; color: #7a1f1f; font-size: 14px; }
+  /* Lined paper for typed letters, in the form and in the list */
+  .lined {
+    font: 400 20px/32px var(--note-font), "Kalam", cursive;
+    color: var(--ink);
+    background: #fbf8f1 repeating-linear-gradient(to bottom, transparent 0 31px, rgba(92, 104, 118, .35) 31px 32px);
+    background-position: 0 6px;
+    padding: 6px 14px 10px;
+  }
+  .letter-form textarea { min-height: 260px; resize: vertical; border: 1px solid rgba(0, 0, 0, .15); border-radius: 4px; }
+  .mail { background: #fbf8f1; box-shadow: 0 2px 6px rgba(40, 30, 20, .15); }
+  .mail .head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; padding: 10px 14px 0; font-size: 14px; color: #666; }
+  .mail .text { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; box-shadow: none; }
+  .mail img { display: block; width: 100%; height: auto; min-height: 80px; padding: 8px; cursor: zoom-in; }
+  .letters .empty { margin: 0; color: #666; }
+  @media (max-width: 600px) {
+    .letters {
+      top: auto;
+      height: 85dvh;
+      width: 100vw;
+      border-right: 0;
+      border-top: 1px solid rgba(0, 0, 0, .12);
+      border-radius: 18px 18px 0 0;
+      transform: translateY(105%);
+    }
+    .letters-open { left: 14px; bottom: 14px; }
+  }
+
   @media (prefers-reduced-motion: reduce) {
-    .letter #img, .side figure, .bot { transition: none; }
+    .letter #img, .side figure, .bot, .letters { transition: none; }
     .shake { animation: none; }
     .effect { display: none; }
   }
@@ -484,6 +587,32 @@
   </footer>
 </section>
 
+<button class="letters-open" id="letters-open" type="button" aria-controls="letters" aria-expanded="false">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>
+  चिठीहरू
+</button>
+<section class="letters" id="letters" aria-label="Our letters" inert>
+  <header>
+    <h2>हाम्रा चिठीहरू</h2>
+    <button class="x" id="letters-close" type="button" aria-label="Close">×</button>
+  </header>
+  <div class="letters-body">
+    <button class="write" id="letters-write" type="button">नयाँ चिठी लेख</button>
+    <form class="letter-form" id="letter-form" hidden>
+      <textarea class="lined" id="letter-text" placeholder="प्रिय ..." aria-label="Your letter"></textarea>
+      <p class="hint">or add a photo of one written on paper:</p>
+      <input id="letter-photo" type="file" accept="image/*" aria-label="Photo of a letter">
+      <img id="letter-preview" alt="" hidden>
+      <p class="error" id="letter-err" role="alert"></p>
+      <div class="buttons">
+        <button class="send" id="letter-send" type="submit">पठाउ</button>
+        <button class="plain" id="letter-cancel" type="button">Cancel</button>
+      </div>
+    </form>
+    <div id="letters-list" aria-live="polite"></div>
+  </div>
+</section>
+
 <script src="letter.js"></script>
 <script>
   const API = "https://for-aarya-bot.netlify.app/api";
@@ -491,6 +620,7 @@
   const b64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
   const $ = id => document.getElementById(id);
   let password = "";
+  let me = "";  // who the password belongs to, as the server says
 
   // Lock screen: lines every 44px, margin line a little in from the left.
   function layoutLock() {
@@ -521,16 +651,32 @@
   // Notes, fonts and pictures loading in can move the letter; re-line the paper when they do.
   new ResizeObserver(() => layout()).observe(document.getElementById("letter"));
 
-  async function decrypt(pass) {
-    const { salt, iv, data, iterations } = window.LETTER;
+  async function passKey(pass, salt, iterations) {
     const baseKey = await crypto.subtle.importKey(
       "raw", new TextEncoder().encode(pass.trim()), "PBKDF2", false, ["deriveKey"]
     );
-    const key = await crypto.subtle.deriveKey(
+    return crypto.subtle.deriveKey(
       { name: "PBKDF2", salt: b64(salt), iterations, hash: "SHA-256" },
       baseKey, { name: "AES-GCM", length: 256 }, false, ["decrypt"]
     );
-    return crypto.subtle.decrypt({ name: "AES-GCM", iv: b64(iv) }, key, b64(data));
+  }
+
+  // letter.js holds the photo's key locked once per password (see lock.mjs).
+  // An older letter.js has the photo locked straight with one password.
+  async function decrypt(pass) {
+    const { salt, iv, data, iterations, keys } = window.LETTER;
+    if (!keys) {
+      const key = await passKey(pass, salt, iterations);
+      return crypto.subtle.decrypt({ name: "AES-GCM", iv: b64(iv) }, key, b64(data));
+    }
+    for (const k of keys) {
+      try {
+        const raw = await crypto.subtle.decrypt({ name: "AES-GCM", iv: b64(k.iv) }, await passKey(pass, k.salt, iterations), b64(k.key));
+        const key = await crypto.subtle.importKey("raw", raw, "AES-GCM", false, ["decrypt"]);
+        return crypto.subtle.decrypt({ name: "AES-GCM", iv: b64(iv) }, key, b64(data));
+      } catch { /* not this password, try the next */ }
+    }
+    throw new Error("wrong password");
   }
 
   function show(bytes) {
@@ -675,9 +821,11 @@
 
   async function loadSettings() {
     try {
-      const { settings } = await api("/settings");
+      const { settings, me: who } = await api("/settings");
+      me = who ?? "";
       applySettings(settings);
       $("bot-open").classList.add("ready");
+      $("letters-open").classList.add("ready");
     } catch {
       // Server not reachable: the page still works as it is, just without the bot.
     }
@@ -723,7 +871,7 @@
   }
   $("bot-open").addEventListener("click", () => setBot(true));
   $("bot-close").addEventListener("click", () => setBot(false));
-  addEventListener("keydown", e => { if (e.key === "Escape") setBot(false); });
+  addEventListener("keydown", e => { if (e.key === "Escape") { setBot(false); setLetters(false); } });
 
   const input = $("bot-input");
   function send(text) {
@@ -739,6 +887,126 @@
   $("bot-ideas").addEventListener("click", e => { if (e.target.matches("button")) send(e.target.textContent); });
   $("bot-undo").addEventListener("click", () => run("/undo", {}));
   $("bot-reset").addEventListener("click", () => run("/reset", {}));
+
+  // ---- our letters --------------------------------------------------------
+
+  const photoUrls = new Map();  // letter id -> object URL, so photos load once
+  async function photoUrl(id) {
+    if (!photoUrls.has(id)) {
+      const res = await fetch(`${API}/letters/${id}/photo`, { headers: { "x-letter-password": password } });
+      if (!res.ok) throw new Error("photo missing");
+      photoUrls.set(id, URL.createObjectURL(await res.blob()));
+    }
+    return photoUrls.get(id);
+  }
+
+  const longDate = iso => new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
+
+  function mail(l) {
+    const head = el("div", { className: "head" }, [el("span", { textContent: `from ${l.from} · ${longDate(l.date)}` })]);
+    if (l.from === me) {
+      // two clicks, so a letter is not lost to a slip
+      const remove = el("button", { className: "plain", type: "button", textContent: "remove" });
+      remove.addEventListener("click", async () => {
+        if (remove.textContent === "remove") { remove.textContent = "sure? remove it"; return; }
+        remove.disabled = true;
+        try { await api(`/letters/${l.id}/delete`, {}); loadLetters(); }
+        catch (e) { remove.textContent = e.message; }
+      });
+      head.append(remove);
+    }
+    const card = el("article", { className: "mail" }, [head]);
+    if (l.text) card.append(el("p", { className: "text lined", textContent: l.text }));
+    if (l.photo) {
+      const img = el("img", { alt: `Letter from ${l.from}` });
+      photoUrl(l.id).then(url => {
+        img.src = url;
+        img.addEventListener("click", () => open(url, "_blank"));
+      }).catch(() => { img.alt = "This photo could not load."; });
+      card.append(img);
+    }
+    return card;
+  }
+
+  async function loadLetters() {
+    const list = $("letters-list");
+    try {
+      const { letters } = await api("/letters");
+      list.replaceChildren(...(letters.length ? letters.map(mail) : [el("p", { className: "empty", textContent: "No letters yet. Write the first one." })]));
+    } catch (e) {
+      list.replaceChildren(el("p", { className: "empty", textContent: e.message }));
+    }
+  }
+
+  function setLetters(open) {
+    $("letters").classList.toggle("open", open);
+    $("letters").inert = !open;
+    $("letters-open").setAttribute("aria-expanded", open);
+    $("letters-open").style.visibility = open ? "hidden" : "";
+    if (open) loadLetters();
+  }
+  $("letters-open").addEventListener("click", () => setLetters(true));
+  $("letters-close").addEventListener("click", () => setLetters(false));
+
+  // Phone photos are large: shrink to 2000px on the long side as a JPEG before sending.
+  async function shrink(file) {
+    const bitmap = await createImageBitmap(file, { imageOrientation: "from-image" });
+    const scale = Math.min(1, 2000 / Math.max(bitmap.width, bitmap.height));
+    const canvas = el("canvas", { width: Math.round(bitmap.width * scale), height: Math.round(bitmap.height * scale) });
+    canvas.getContext("2d").drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    const blob = await new Promise(done => canvas.toBlob(done, "image/jpeg", 0.85));
+    const dataUrl = await new Promise(done => {
+      const reader = new FileReader();
+      reader.onload = () => done(reader.result);
+      reader.readAsDataURL(blob);
+    });
+    return dataUrl.slice(dataUrl.indexOf(",") + 1);
+  }
+
+  const letterForm = $("letter-form");
+  let photo = "";
+  function showForm(open) {
+    letterForm.hidden = !open;
+    $("letters-write").hidden = open;
+    if (open) $("letter-text").focus();
+    else {
+      letterForm.reset();
+      photo = "";
+      $("letter-preview").hidden = true;
+      $("letter-err").textContent = "";
+    }
+  }
+  $("letters-write").addEventListener("click", () => showForm(true));
+  $("letter-cancel").addEventListener("click", () => showForm(false));
+  $("letter-photo").addEventListener("change", async e => {
+    const file = e.target.files[0];
+    photo = "";
+    $("letter-preview").hidden = true;
+    if (!file) return;
+    try {
+      photo = await shrink(file);
+      $("letter-preview").src = "data:image/jpeg;base64," + photo;
+      $("letter-preview").hidden = false;
+    } catch {
+      $("letter-err").textContent = "That photo could not be opened. Try a JPEG or PNG.";
+    }
+  });
+  letterForm.addEventListener("submit", async e => {
+    e.preventDefault();
+    const text = $("letter-text").value.trim();
+    if (!text && !photo) { $("letter-err").textContent = "Write something or add a photo first."; return; }
+    $("letter-send").disabled = true;
+    $("letter-err").textContent = "";
+    try {
+      await api("/letters", { text, photo });
+      showForm(false);
+      loadLetters();
+    } catch (err) {
+      $("letter-err").textContent = err.message;
+    } finally {
+      $("letter-send").disabled = false;
+    }
+  });
 
   // ---- unlocking ---------------------------------------------------------
 
