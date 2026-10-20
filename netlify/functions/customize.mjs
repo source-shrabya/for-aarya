@@ -82,7 +82,7 @@ async function addLetter(store, from, { text, photo }) {
 // watched and planned before the page had a list.
 const STARTING_MOVIES = [
   { title: "Narnia", list: "watched", year: 2005, imdb: "tt0363771", poster: "https://m.media-amazon.com/images/M/MV5BMTc0NTUwMTU5OV5BMl5BanBnXkFtZTcwNjAwNzQzMw@@._V1_.jpg" },
-  { title: "Men in Love", list: "watched" },  // two on IMDb (a 2024 series and a 1990 film), so no poster guessed
+  { title: "Man in Love", list: "watched", year: 2021, imdb: "tt14428606" },
   { title: "Tangled", list: "watched", year: 2010, imdb: "tt0398286", poster: "https://m.media-amazon.com/images/M/MV5BMTAxNDYxMjg0MjNeQTJeQWpwZ15BbWU3MDcyNTk2OTM@._V1_.jpg" },
   { title: "Twilight", list: "watched", year: 2008, imdb: "tt1099212", poster: "https://m.media-amazon.com/images/M/MV5BMTQ2NzUxMTAxN15BMl5BanBnXkFtZTcwMzEyMTIwMg@@._V1_.jpg" },
   { title: "Dhurandhar", list: "watched", year: 2025, imdb: "tt33014583", poster: "https://m.media-amazon.com/images/M/MV5BMzFiNTVkZjYtM2I3Yi00MGNjLWEyYTAtMGViNGExZmMzMGMzXkEyXkFqcGc@._V1_.jpg" },

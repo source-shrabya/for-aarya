@@ -368,7 +368,7 @@
     b.addEventListener("click", async () => {
       if (b.textContent === "remove") { b.textContent = "sure? remove it"; return; }
       b.disabled = true;
-      try { await api(`/movies/${m.id}/delete`, {}); item.remove(); toast(`Removed ${m.title}.`); counts(); }
+      try { await api(`/movies/${m.id}/delete`, {}); item.remove(); onList = onList.filter(x => x.id !== m.id); toast(`Removed ${m.title}.`); counts(); }
       catch (e) { b.disabled = false; toast(e.message); }
     });
     return b;
@@ -479,7 +479,8 @@
   }
 
   function row(movie) {
-    const already = onList.find(m => (movie.imdb && m.imdb === movie.imdb) || m.title.toLowerCase() === movie.title.toLowerCase());
+    // by IMDb id, so two movies with the same name are told apart; by name only for ones added without a search
+    const already = onList.find(m => m.imdb ? m.imdb === movie.imdb : m.title.toLowerCase() === movie.title.toLowerCase());
     const bits = [movie.year, movie.series && "series", movie.stars].filter(Boolean).join(", ");
     return el("li", {}, [
       poster(movie, 88),
