@@ -116,7 +116,8 @@ export default async (req) => {
   const me = whoIs(req.headers.get("x-letter-password"));
   if (!me) return send({ error: "wrong password" }, 401);
 
-  const store = getStore("love-letter");
+  // strong: a read straight after a write sees it (the default can lag by up to a minute)
+  const store = getStore({ name: "love-letter", consistency: "strong" });
   const route = new URL(req.url).pathname.replace(/^\/api\//, "");
   const [, letterId, letterAction] = route.match(/^letters\/([a-z0-9]+)\/(photo|delete)$/) ?? [];
 
