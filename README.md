@@ -30,7 +30,11 @@ Letters and their photos are kept in Netlify Blobs, next to the bot's settings, 
 
 ## Our movies
 
-The "फिल्महरू" button at the bottom left of the letter page goes to `movies.html`, a page of its own with two lists: movies we have watched and movies we want to watch. Either of us can add a movie to either list, tick a bucket-list movie as watched (it moves over with the date), or remove one. The list started with the movies we had already written down.
+The "फिल्महरू" button at the bottom left of the letter page goes to `movies.html`, a page of its own with two lists: movies we have watched and movies we want to watch. Movies we want to see are cinema tickets. When we tick one as watched, the ticket tears and the stub moves to the watched side with the date stamped on it. Either of us can add or remove a movie. The list started with the movies we had already written down.
+
+The search box at the top looks movies up as you type and shows their posters. The server asks IMDb's search box for this (`/api/movies/search`), which needs no key but is not an official API. If it ever stops answering, a movie can still be added by its name.
+
+Nobody else can see the lists, the letters or the photos: every request to the server needs one of our two passwords, and the server answers a wrong one with "wrong password". The page files on GitHub hold no letters or movies.
 
 The password is kept in the browser tab after the letter opens, so going to the movies page and back does not ask for it again. Closing the tab forgets it.
 

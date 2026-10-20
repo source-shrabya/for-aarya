@@ -460,8 +460,55 @@
   .letter-form { display: flex; flex-direction: column; gap: 12px; font: 16px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; color: #333; }
   .letter-form[hidden] { display: none; }
   .letter-form .buttons { display: flex; align-items: center; justify-content: center; gap: 20px; }
-  .letter-form .hint { margin: 0; }
-  .letter-form img { max-width: 100%; }
+  /* The photo picker: an empty polaroid taped to the page, waiting for a photo */
+  .photo-drop {
+    position: relative;
+    align-self: center;
+    width: min(300px, 100%);
+    margin: 18px 0 6px;
+    padding: 12px 12px 0;
+    background: #fbf8f1;
+    box-shadow: 0 2px 4px rgba(40, 30, 20, .25), 0 8px 20px rgba(40, 30, 20, .18);
+    transform: rotate(-2deg);
+    transition: transform .2s ease;
+    cursor: pointer;
+  }
+  .photo-drop:hover, .photo-drop.over { transform: rotate(0deg) scale(1.03); }
+  .photo-drop:focus-within { outline: 2px dashed #8c2f3b; outline-offset: 4px; }
+  .photo-drop input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+  .photo-drop::before {
+    content: "";
+    position: absolute;
+    top: -11px;
+    left: 50%;
+    width: 86px;
+    height: 22px;
+    transform: translateX(-50%) rotate(3deg);
+    background: rgba(240, 232, 205, .8);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, .12);
+  }
+  .photo-drop .frame {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    aspect-ratio: 4 / 3;
+    border: 2px dashed rgba(29, 42, 80, .3);
+    background: #efe9dc;
+    color: var(--ink);
+    text-align: center;
+    padding: 12px;
+  }
+  .photo-drop.over .frame { border-color: #8c2f3b; background: #f6e3e0; }
+  .photo-drop .frame svg { width: 46px; height: 46px; color: #8c2f3b; transform: rotate(-8deg); }
+  .photo-drop .frame b { font: 400 21px/1.2 "Kalam", cursive; }
+  .photo-drop .frame small { font-size: 14px; color: #666; }
+  .photo-drop.has .frame { padding: 0; border: 0; background: #222; }
+  .photo-drop.has .frame > :not(img) { display: none; }
+  .photo-drop img { width: 100%; height: 100%; object-fit: cover; }
+  .photo-drop .caption { display: block; text-align: center; font: 400 19px/46px "Kalam", cursive; color: #333; }
+  .letter-form .photo-off { align-self: center; }
   .letter-form .error { margin: 0; color: #7a1f1f; min-height: 1.45em; }
   /* A sheet of lined paper for typed letters */
   .lined {
@@ -539,9 +586,17 @@
   <button class="write" id="letters-write" type="button">नयाँ चिठी लेख</button>
   <form class="letter-form" id="letter-form" hidden>
     <textarea class="lined" id="letter-text" placeholder="प्रिय ..." aria-label="Your letter"></textarea>
-    <p class="hint">or add a photo of one written on paper:</p>
-    <input id="letter-photo" type="file" accept="image/*" aria-label="Photo of a letter">
-    <img id="letter-preview" alt="" hidden>
+    <label class="photo-drop" id="photo-drop">
+      <input id="letter-photo" type="file" accept="image/*">
+      <span class="frame">
+        <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 15h7l3-5h14l3 5h7v23H7z"/><circle cx="24" cy="26" r="7"/><path d="M36 20h2"/><path d="M24 20.5c-1.2-1.6-3.8-.9-3.8 1.2 0 1.8 3.8 4.3 3.8 4.3s3.8-2.5 3.8-4.3c0-2.1-2.6-2.8-3.8-1.2z" fill="currentColor" stroke="none"/></svg>
+        <b>stick a photo of your letter here</b>
+        <small>tap to pick one, or drop it in</small>
+        <img id="letter-preview" alt="Your photo" hidden>
+      </span>
+      <span class="caption" id="photo-caption">or just write above</span>
+    </label>
+    <button class="plain photo-off" id="photo-off" type="button" hidden>take the photo off</button>
     <p class="error" id="letter-err" role="alert"></p>
     <div class="buttons">
       <button class="send" id="letter-send" type="submit">पठाउ</button>
@@ -947,25 +1002,37 @@
     }
     else {
       letterForm.reset();
-      photo = "";
-      $("letter-preview").hidden = true;
+      setPhoto("");
       $("letter-err").textContent = "";
     }
   }
   $("letters-write").addEventListener("click", () => showForm(true));
   $("letter-cancel").addEventListener("click", () => showForm(false));
-  $("letter-photo").addEventListener("change", async e => {
-    const file = e.target.files[0];
-    photo = "";
-    $("letter-preview").hidden = true;
+  function setPhoto(data) {
+    photo = data;
+    $("photo-drop").classList.toggle("has", Boolean(data));
+    $("letter-preview").hidden = !data;
+    if (data) $("letter-preview").src = "data:image/jpeg;base64," + data;
+    else $("letter-photo").value = "";
+    $("photo-caption").textContent = data ? "ready to send ♡" : "or just write above";
+    $("photo-off").hidden = !data;
+  }
+  async function usePhoto(file) {
+    $("letter-err").textContent = "";
     if (!file) return;
-    try {
-      photo = await shrink(file);
-      $("letter-preview").src = "data:image/jpeg;base64," + photo;
-      $("letter-preview").hidden = false;
-    } catch {
-      $("letter-err").textContent = "That photo could not be opened. Try a JPEG or PNG.";
-    }
+    if (!file.type.startsWith("image/")) { $("letter-err").textContent = "That isn't a photo. Try a JPEG or PNG."; return; }
+    try { setPhoto(await shrink(file)); }
+    catch { $("letter-err").textContent = "That photo could not be opened. Try a JPEG or PNG."; }
+  }
+  $("letter-photo").addEventListener("change", e => usePhoto(e.target.files[0]));
+  $("photo-off").addEventListener("click", () => setPhoto(""));
+  const drop = $("photo-drop");
+  drop.addEventListener("dragover", e => { e.preventDefault(); drop.classList.add("over"); });
+  drop.addEventListener("dragleave", () => drop.classList.remove("over"));
+  drop.addEventListener("drop", e => {
+    e.preventDefault();
+    drop.classList.remove("over");
+    usePhoto(e.dataTransfer.files[0]);
   });
   letterForm.addEventListener("submit", async e => {
     e.preventDefault();

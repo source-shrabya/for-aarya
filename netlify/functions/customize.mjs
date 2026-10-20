@@ -7,7 +7,8 @@
 //   GET  /api/letters/<id>/photo    -> that letter's photo
 //   POST /api/letters/<id>/delete   -> removes a letter, only by the one who wrote it
 //   GET  /api/movies          -> our movie list: what we have watched and what we want to
-//   POST /api/movies {title, list}  -> adds a movie to "watched" or "bucket"
+//   GET  /api/movies/search?q=      -> movies matching a name, with year and poster (from IMDb's search box)
+//   POST /api/movies {title, list, year, poster, imdb} -> adds a movie to "watched" or "bucket"
 //   POST /api/movies/<id>/watched   -> moves a bucket-list movie to watched
 //   POST /api/movies/<id>/delete    -> removes a movie
 import Anthropic from "@anthropic-ai/sdk";
@@ -80,19 +81,53 @@ async function addLetter(store, from, { text, photo }) {
 // Movies: one list. The first time it is read it starts with what we had already
 // watched and planned before the page had a list.
 const STARTING_MOVIES = [
-  ["Narnia", "watched"], ["Men in Love", "watched"], ["Tangled", "watched"], ["Twilight", "watched"],
-  ["Dhurandhar", "watched"], ["Dhurandhar 2", "watched"], ["Palm Springs", "bucket"], ["Avatar", "bucket"],
+  { title: "Narnia", list: "watched", year: 2005, imdb: "tt0363771", poster: "https://m.media-amazon.com/images/M/MV5BMTc0NTUwMTU5OV5BMl5BanBnXkFtZTcwNjAwNzQzMw@@._V1_.jpg" },
+  { title: "Men in Love", list: "watched" },  // two on IMDb (a 2024 series and a 1990 film), so no poster guessed
+  { title: "Tangled", list: "watched", year: 2010, imdb: "tt0398286", poster: "https://m.media-amazon.com/images/M/MV5BMTAxNDYxMjg0MjNeQTJeQWpwZ15BbWU3MDcyNTk2OTM@._V1_.jpg" },
+  { title: "Twilight", list: "watched", year: 2008, imdb: "tt1099212", poster: "https://m.media-amazon.com/images/M/MV5BMTQ2NzUxMTAxN15BMl5BanBnXkFtZTcwMzEyMTIwMg@@._V1_.jpg" },
+  { title: "Dhurandhar", list: "watched", year: 2025, imdb: "tt33014583", poster: "https://m.media-amazon.com/images/M/MV5BMzFiNTVkZjYtM2I3Yi00MGNjLWEyYTAtMGViNGExZmMzMGMzXkEyXkFqcGc@._V1_.jpg" },
+  { title: "Dhurandhar 2", list: "watched", year: 2026, imdb: "tt39139925", poster: "https://m.media-amazon.com/images/M/MV5BMzE2ZmIzNTEtZTE1OS00ZDFhLTk2Y2YtZDEyNGIxNTdiYWFlXkEyXkFqcGc@._V1_.jpg" },
+  { title: "Palm Springs", list: "bucket", year: 2020, imdb: "tt9484998", poster: "https://m.media-amazon.com/images/M/MV5BY2VkNGY0MTMtMjEzZi00OThkLWJiOTMtNGU4ZGNjZDE5ZGIyXkEyXkFqcGc@._V1_.jpg" },
+  { title: "Avatar", list: "bucket", year: 2009, imdb: "tt0499549", poster: "https://m.media-amazon.com/images/M/MV5BMDEzMmQwZjctZWU2My00MWNlLWE0NjItMDJlYTRlNGJiZjcyXkEyXkFqcGc@._V1_.jpg" },
 ];
 const newId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 
 async function moviesIn(store) {
   const saved = await store.get("movies", { type: "json" });
-  if (saved) return saved;
+  if (saved) {
+    // a list saved before posters existed: give the starting movies theirs
+    let changed = false;
+    for (const m of saved) {
+      const start = !m.poster && STARTING_MOVIES.find(s => s.title === m.title && s.poster);
+      if (start) { Object.assign(m, { year: start.year, imdb: start.imdb, poster: start.poster }); changed = true; }
+    }
+    if (changed) await store.setJSON("movies", saved);
+    return saved;
+  }
   const date = new Date().toISOString();
-  const movies = STARTING_MOVIES.map(([title, list], i) => ({ id: newId() + i, title, list, by: "Shrabya", added: date }));
+  const movies = STARTING_MOVIES.map((m, i) => ({ id: newId() + i, ...m, by: "Shrabya", added: date }));
   await store.setJSON("movies", movies);
   return movies;
 }
+
+// IMDb's own search box answers this without a key. It is not a documented API, so if it
+// stops working the page still lets us add a movie by typing its name.
+const SEARCH_KINDS = ["movie", "tvMovie", "tvSeries", "tvMiniSeries"];
+async function searchMovies(q) {
+  const query = q.trim().toLowerCase().slice(0, 60);
+  if (!query) return [];
+  const res = await fetch(`https://v2.sg.media-imdb.com/suggestion/x/${encodeURIComponent(query)}.json`, { signal: AbortSignal.timeout(5000) });
+  if (!res.ok) throw new Error("search failed");
+  const { d = [] } = await res.json();
+  return d
+    .filter(r => SEARCH_KINDS.includes(r.qid) && /^tt\d+$/.test(r.id))
+    .slice(0, 8)
+    .map(r => ({ title: r.l, year: r.y ?? null, imdb: r.id, series: r.qid.startsWith("tvSeries") || r.qid === "tvMiniSeries", poster: r.i?.imageUrl ?? null, stars: r.s ?? "" }));
+}
+
+// Only keep details that look like what the search gives back
+const posterOk = p => typeof p === "string" && /^https:\/\/m\.media-amazon\.com\/images\/[^\s"'<>()\\]+$/.test(p) && p.length < 400;
+const yearOk = y => Number.isInteger(y) && y > 1880 && y < 2100;
 
 // Earlier turns are sent as plain text so Claude knows what "make it bigger" refers to.
 function cleanHistory(history) {
@@ -147,6 +182,10 @@ export default async (req) => {
     if (req.method === "GET" && route === "settings") return send({ settings: await load(store), me });
 
     if (req.method === "GET" && route === "movies") return send({ movies: await moviesIn(store) });
+    if (req.method === "GET" && route === "movies/search") {
+      try { return send({ results: await searchMovies(new URL(req.url).searchParams.get("q") ?? "") }); }
+      catch { return send({ error: "The movie search isn't answering. You can still add it by name." }, 502); }
+    }
     if (req.method === "GET" && route === "letters") return send({ letters: await lettersIn(store) });
     if (req.method === "GET" && letterAction === "photo") {
       const bytes = await store.get(`photo-${letterId}`, { type: "arrayBuffer" });
@@ -161,12 +200,18 @@ export default async (req) => {
       return send({ letter });
     }
     if (route === "movies") {
-      const { title, list } = await req.json();
+      const { title, list, year, poster, imdb } = await req.json();
       const name = typeof title === "string" ? title.trim().slice(0, 120) : "";
       if (!name) return send({ error: "Write the movie's name first." }, 400);
+      const movies = await moviesIn(store);
+      const twin = movies.find(m => (imdb && m.imdb === imdb) || m.title.toLowerCase() === name.toLowerCase());
+      if (twin) return send({ error: `${twin.title} is already on the ${twin.list === "watched" ? "watched" : "to-watch"} list.` }, 409);
       const movie = { id: newId(), title: name, list: list === "watched" ? "watched" : "bucket", by: me, added: new Date().toISOString() };
+      if (yearOk(year)) movie.year = year;
+      if (posterOk(poster)) movie.poster = poster;
+      if (typeof imdb === "string" && /^tt\d{1,10}$/.test(imdb)) movie.imdb = imdb;
       if (movie.list === "watched") movie.watched = movie.added;
-      await store.setJSON("movies", [...await moviesIn(store), movie]);
+      await store.setJSON("movies", [...movies, movie]);
       return send({ movie });
     }
     if (movieAction) {

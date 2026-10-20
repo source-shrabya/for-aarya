@@ -7,17 +7,19 @@
 <title>हाम्रा फिल्महरू</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Kalam:wght@300;400&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Kalam:wght@300;400;700&display=swap" rel="stylesheet">
 <style>
-  /* The same notebook paper as the letter page, without the bot's settings */
+  /* The same notebook paper as the letter page. Movies to watch are whole cinema tickets;
+     once we watch one it is torn, and the stub goes on the watched side with a date stamp. */
   :root {
     --paper: #c3b9a7;
     --rule: color-mix(in srgb, #5c6876 55%, transparent);
     --margin: color-mix(in srgb, #c47868 70%, transparent);
     --ink: #1d2a50;
-    --note-font: "Kalam";
+    --ink-soft: #55608a;
+    --stamp: #a3333f;
+    --ticket: #f4e4c1;
     --gap: 44px;
-    --sheet-shadow: 0 2px 6px rgba(40, 30, 20, .2), 0 10px 26px rgba(40, 30, 20, .14), 0 0 60px rgba(255, 248, 230, .45);
   }
   * { box-sizing: border-box; }
   html {
@@ -33,9 +35,12 @@
     margin: 0;
     min-height: 100dvh;
     color: var(--ink);
-    font: 300 24px/var(--gap) "Kalam", "Comic Sans MS", cursive;
+    font: 400 20px/1.4 "Kalam", "Comic Sans MS", cursive;
     overflow-x: hidden;
   }
+  button, input { font: inherit; color: inherit; }
+  :focus-visible { outline: 2px dashed var(--stamp); outline-offset: 3px; }
+
   .back {
     position: fixed;
     left: 20px;
@@ -43,93 +48,235 @@
     z-index: 10;
     padding: 10px 18px;
     border-radius: 999px;
-    background: #8c2f3b;
+    background: var(--stamp);
     color: #f6efe2;
-    font: 400 20px/1 "Kalam", cursive;
+    font-size: 20px;
+    line-height: 1;
     text-decoration: none;
     box-shadow: 0 4px 14px rgba(140, 47, 59, .35);
   }
+
   /* Asked only when the letter page was not opened first in this tab */
-  .lock { padding: var(--gap) 24px 0 140px; }
+  .lock { padding: var(--gap) 24px 0 140px; font-weight: 300; font-size: 24px; line-height: var(--gap); }
   .lock[hidden] { display: none; }
   .lock p, .lock form { margin: 0; }
   .lock form { display: flex; align-items: center; gap: 14px; }
-  .lock input, .lock button {
-    font: inherit;
-    font-weight: 400;
-    color: var(--ink);
-    background: transparent;
-    border: 0;
-    outline: none;
-    height: var(--gap);
-  }
+  .lock input, .lock button { background: transparent; border: 0; outline: none; height: var(--gap); }
   .lock input { width: 220px; letter-spacing: 2px; }
   .lock button { cursor: pointer; text-decoration: underline; text-underline-offset: 6px; }
-  .lock .error { color: #8c2f3b; min-height: var(--gap); }
-  .lined {
-    font: 400 24px/40px var(--note-font), "Kalam", cursive;
-    color: var(--ink);
-    background: #f7f2e7 repeating-linear-gradient(to bottom, transparent 0 39px, rgba(92, 104, 118, .4) 39px 40px);
-    background-position: 0 14px;
-    padding: 14px 28px 20px;
-  }
-  .movies {
-    width: min(900px, 94vw);
-    margin: 0 auto;
-    padding: 40px 0 120px;
-  }
+  .lock .error { color: var(--stamp); min-height: var(--gap); }
+
+  .movies { width: min(980px, 100vw - 32px); margin: 0 auto; padding: 36px 0 140px; }
   .movies[hidden] { display: none; }
-  .movies h2 { margin: 0 0 24px; text-align: center; font: 400 34px/1.2 "Kalam", cursive; color: var(--ink); }
-  .movie-lists { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; align-items: start; }
-  .movie-list { box-shadow: var(--sheet-shadow); }
-  .movie-list h3 { margin: 0; font: inherit; font-weight: 400; color: #8c2f3b; }
-  .movie-list ul { list-style: none; margin: 0; padding: 0; }
-  .movie-list li { display: flex; align-items: baseline; gap: 10px; }
-  .movie-list .title { flex: 1; min-width: 0; overflow-wrap: anywhere; }
-  .movie-list .by { font: 13px/1 system-ui, -apple-system, "Segoe UI", sans-serif; color: #888; white-space: nowrap; }
-  .movie-list li button {
-    border: 0;
-    background: none;
-    padding: 0 2px;
-    color: #777;
-    font: 15px/1 system-ui, -apple-system, "Segoe UI", sans-serif;
-    cursor: pointer;
-    white-space: nowrap;
+  .movies h1 {
+    margin: 0;
+    font-size: clamp(44px, 7vw, 68px);
+    line-height: 1.1;
+    font-weight: 700;
+    text-align: center;
+    transform: rotate(-2deg);
   }
-  .movie-list li button.seen { color: #2f6b3a; }
-  .movie-list .none { color: #888; }
-  .movie-add { display: flex; gap: 8px; align-items: center; }
-  .movie-add input {
+  .movies .sub { margin: 6px 0 0; text-align: center; color: var(--ink-soft); font-weight: 300; }
+
+  /* A ticket: notches cut from both sides, a dashed tear line before the stub */
+  .ticket { filter: drop-shadow(0 2px 2px rgba(40, 30, 20, .22)) drop-shadow(0 8px 14px rgba(40, 30, 20, .16)); }
+  .ticket > .paper {
+    position: relative;
+    display: flex;
+    background: var(--tint, var(--ticket));
+    border-radius: 6px;
+    -webkit-mask:
+      radial-gradient(circle 11px at 0 50%, transparent 10px, #000 11px) left / 51% 100% no-repeat,
+      radial-gradient(circle 11px at 100% 50%, transparent 10px, #000 11px) right / 51% 100% no-repeat;
+    mask:
+      radial-gradient(circle 11px at 0 50%, transparent 10px, #000 11px) left / 51% 100% no-repeat,
+      radial-gradient(circle 11px at 100% 50%, transparent 10px, #000 11px) right / 51% 100% no-repeat;
+  }
+  .stub {
+    flex: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 12px 16px 12px 18px;
+    border-left: 2px dashed rgba(29, 42, 80, .35);
+    text-align: center;
+  }
+  .admit { font-size: 15px; line-height: 1.1; color: var(--ink-soft); transform: rotate(-4deg); }
+
+  /* Search, as the ticket you fill in */
+  .finder { position: relative; margin: 40px auto 56px; max-width: 640px; z-index: 5; }
+  .finder .paper { align-items: stretch; }
+  .finder label { flex: 1; display: flex; align-items: center; gap: 12px; padding: 16px 12px 16px 30px; }
+  .finder svg { flex: none; width: 26px; height: 26px; color: var(--stamp); }
+  .finder input {
     flex: 1;
     min-width: 0;
-    height: 40px;
     border: 0;
     background: transparent;
-    font: inherit;
-    color: var(--ink);
+    font-size: 24px;
     outline: none;
   }
-  .movie-add input::placeholder { color: #9a9a9a; }
-  .movie-add button {
-    border: 0;
+  .finder input::placeholder { color: rgba(29, 42, 80, .45); }
+  .finder .stub { width: 92px; }
+  .results {
+    position: absolute;
+    left: 12px;
+    right: 12px;
+    top: calc(100% + 6px);
+    margin: 0;
+    padding: 6px;
+    list-style: none;
+    background: #fbf6ea;
+    border-radius: 10px;
+    box-shadow: 0 10px 30px rgba(40, 30, 20, .28);
+    max-height: min(60vh, 520px);
+    overflow-y: auto;
+  }
+  .results[hidden] { display: none; }
+  .results li { display: flex; align-items: center; gap: 12px; padding: 6px 8px; border-radius: 8px; }
+  .results li + li { border-top: 1px dashed rgba(29, 42, 80, .15); }
+  .results .what { flex: 1; min-width: 0; line-height: 1.2; }
+  .results .what b { display: block; font-weight: 400; overflow-wrap: anywhere; }
+  .results .what small { color: var(--ink-soft); font-size: 15px; }
+  .results .note { color: var(--ink-soft); padding: 10px 12px; }
+  .results .add { display: flex; flex-direction: column; gap: 4px; }
+  .pill {
+    border: 1.5px solid var(--ink);
     border-radius: 999px;
-    padding: 2px 14px;
-    background: #8c2f3b;
-    color: #f6efe2;
-    font: 400 18px/1.4 "Kalam", cursive;
+    background: transparent;
+    padding: 0 12px;
+    font-size: 16px;
+    line-height: 28px;
+    white-space: nowrap;
     cursor: pointer;
   }
-  .movie-add .error { color: #7a1f1f; font: 14px/1.3 system-ui, sans-serif; }
-  @media (max-width: 700px) {
-    .movie-lists { grid-template-columns: 1fr; }
-    .movies { width: 100vw; padding: 24px 10px 100px; }
+  .pill:hover { background: var(--ink); color: #fbf6ea; }
+  .pill.red { border-color: var(--stamp); color: var(--stamp); }
+  .pill.red:hover { background: var(--stamp); color: #fbf6ea; }
+  .pill:disabled { opacity: .5; cursor: default; }
+
+  /* Posters, or a little drawn film frame when there isn't one */
+  .poster {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: var(--pw, 64px);
+    aspect-ratio: 2 / 3;
+    object-fit: cover;
+    border-radius: 3px;
+    background: #2a2f45;
+    color: #f4e4c1;
+    font-size: calc(var(--pw, 64px) * .45);
+    line-height: 1;
+  }
+  .results .poster { --pw: 44px; }
+
+  .shelf h2 { margin: 0 0 18px; font-size: 34px; line-height: 1.2; font-weight: 400; }
+  .shelf h2 span { font-size: 18px; color: var(--ink-soft); font-weight: 300; }
+  .shelf + .shelf { margin-top: 64px; }
+  .empty { color: var(--ink-soft); font-weight: 300; }
+
+  /* To watch: whole tickets */
+  .tickets { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 420px), 1fr)); gap: 22px 28px; margin: 0; padding: 0; list-style: none; }
+  .tickets li:nth-child(4n+1) { --tint: #f4e4c1; --tilt: -.8deg; }
+  .tickets li:nth-child(4n+2) { --tint: #f3d7cf; --tilt: .7deg; }
+  .tickets li:nth-child(4n+3) { --tint: #dbe7d4; --tilt: -.4deg; }
+  .tickets li:nth-child(4n+4) { --tint: #d8e1ec; --tilt: .9deg; }
+  .tickets .ticket { transform: rotate(var(--tilt)); }
+  .tickets .front { flex: 1; min-width: 0; display: flex; gap: 14px; padding: 12px 8px 12px 26px; }
+  .tickets .poster { --pw: 70px; }
+  .tickets .info { min-width: 0; display: flex; flex-direction: column; }
+  .tickets .name { font-size: 22px; line-height: 1.2; font-weight: 700; overflow-wrap: anywhere; }
+  .meta { font-size: 15px; line-height: 1.3; color: var(--ink-soft); }
+  .remove {
+    margin-top: auto;
+    align-self: flex-start;
+    border: 0;
+    background: none;
+    padding: 2px 0;
+    font-size: 14px;
+    color: var(--ink-soft);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    cursor: pointer;
+  }
+  .tickets .stub { width: 128px; }
+  .tickets .stub .pill { white-space: normal; line-height: 1.2; padding: 5px 10px; font-size: 15px; }
+  /* Watching it: the stub tears off */
+  .tickets .tearing .stub { animation: tear .55s ease-in forwards; transform-origin: 0 100%; }
+  @keyframes tear {
+    30% { transform: rotate(6deg); }
+    100% { transform: translate(30px, 60px) rotate(24deg); opacity: 0; }
   }
 
+  /* Watched: torn stubs with the date we saw it stamped on */
+  .stubs { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 30px 22px; margin: 0; padding: 0; list-style: none; }
+  .stubs li { position: relative; transform: rotate(var(--tilt, 0deg)); }
+  .stubs li:nth-child(3n+1) { --tilt: -2deg; }
+  .stubs li:nth-child(3n+2) { --tilt: 1.5deg; }
+  .stubs li:nth-child(3n+3) { --tilt: -.5deg; }
+  .stubs .card {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 10px 10px 18px;
+    background: var(--ticket);
+    /* the torn bottom edge */
+    clip-path: polygon(0 0, 100% 0, 100% calc(100% - 6px), 92% 100%, 84% calc(100% - 7px), 75% 100%, 66% calc(100% - 5px), 58% 100%, 49% calc(100% - 7px), 40% 100%, 31% calc(100% - 6px), 22% 100%, 13% calc(100% - 7px), 5% 100%, 0 calc(100% - 5px));
+  }
+  .stubs .shadow { filter: drop-shadow(0 2px 2px rgba(40, 30, 20, .22)) drop-shadow(0 6px 10px rgba(40, 30, 20, .14)); }
+  .stubs .poster { --pw: 100%; width: 100%; font-size: 56px; }
+  .stubs .name { font-size: 18px; line-height: 1.2; overflow-wrap: anywhere; }
+  .stamp {
+    position: absolute;
+    right: -10px;
+    top: 52%;
+    padding: 3px 10px 1px;
+    border: 2.5px solid var(--stamp);
+    border-radius: 8px;
+    color: var(--stamp);
+    background: #f6e9cc;
+    box-shadow: 0 0 0 2px #f6e9cc;
+    font-size: 18px;
+    font-weight: 700;
+    line-height: 1.1;
+    text-align: center;
+    transform: rotate(-12deg);
+  }
+  .stubs .remove { margin: 0; }
+
+  .toast {
+    position: fixed;
+    left: 50%;
+    bottom: 24px;
+    z-index: 20;
+    transform: translateX(-50%);
+    padding: 8px 18px;
+    border-radius: 999px;
+    background: var(--ink);
+    color: #fbf6ea;
+    font-size: 17px;
+    box-shadow: 0 6px 20px rgba(29, 42, 80, .3);
+  }
+  .toast[hidden] { display: none; }
+
   @media (max-width: 600px) {
-    body { font-size: 21px; }
-    .lock { padding-left: 24px; }
-    .lined { font-size: 21px; padding: 14px 16px 20px; }
+    .lock { padding-left: 24px; font-size: 21px; }
+    .movies { padding-top: 20px; }
+    .finder { margin: 28px auto 44px; }
+    .finder label { padding-left: 24px; }
+    .finder input { font-size: 20px; }
+    .finder .stub { width: 70px; padding-left: 10px; padding-right: 12px; }
+    .tickets .front { padding-left: 22px; }
+    .tickets .poster { --pw: 58px; }
+    .tickets .stub { width: 108px; padding-left: 10px; padding-right: 14px; }
+    .stubs { grid-template-columns: repeat(2, 1fr); }
     .back { left: 14px; bottom: 14px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .tickets .tearing .stub { animation: none; opacity: 0; }
   }
 </style>
 </head>
@@ -145,26 +292,31 @@
 </section>
 
 <main class="movies" id="movies" hidden>
-  <h2>हाम्रा फिल्महरू</h2>
-  <div class="movie-lists">
-    <div class="movie-list lined">
-      <h3>हेरिसकेका</h3>
-      <ul id="movies-watched"></ul>
-      <form class="movie-add" data-list="watched">
-        <input maxlength="120" placeholder="a movie we watched" aria-label="Add a movie we watched">
-        <button type="submit">थप</button>
-      </form>
+  <h1>हाम्रा फिल्महरू</h1>
+  <p class="sub">what we've watched together, and what's next</p>
+
+  <div class="finder ticket">
+    <div class="paper">
+      <label>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 5 5"/></svg>
+        <input id="search" type="search" autocomplete="off" placeholder="find a movie..." aria-label="Find a movie" aria-controls="results">
+      </label>
+      <div class="stub"><span class="admit">admit<br>two</span></div>
     </div>
-    <div class="movie-list lined">
-      <h3>हेर्न बाँकी</h3>
-      <ul id="movies-bucket"></ul>
-      <form class="movie-add" data-list="bucket">
-        <input maxlength="120" placeholder="a movie to watch together" aria-label="Add a movie to watch">
-        <button type="submit">थप</button>
-      </form>
-    </div>
+    <ul class="results" id="results" hidden aria-live="polite"></ul>
   </div>
+
+  <section class="shelf">
+    <h2>हेर्न बाँकी <span id="bucket-count"></span></h2>
+    <ul class="tickets" id="movies-bucket"></ul>
+  </section>
+  <section class="shelf">
+    <h2>हेरिसकेका <span id="watched-count"></span></h2>
+    <ul class="stubs" id="movies-watched"></ul>
+  </section>
 </main>
+
+<p class="toast" id="toast" role="status" hidden></p>
 <a class="back" href="./">← चिठी</a>
 
 <script>
@@ -193,40 +345,100 @@
     return data;
   }
 
+  let toastTimer;
+  function toast(text) {
+    $("toast").textContent = text;
+    $("toast").hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { $("toast").hidden = true; }, 2600);
+  }
+
+  // IMDb poster links can ask for a smaller copy
+  const small = (url, width) => url.replace(/\._V1_.*\.jpg$/, `._V1_QL80_UX${width}_.jpg`);
+  function poster(m, width) {
+    if (!m.poster) return el("span", { className: "poster", textContent: [...m.title][0] ?? "?", ariaHidden: "true" });
+    return el("img", { className: "poster", src: small(m.poster, width), alt: "", loading: "lazy", referrerPolicy: "no-referrer" });
+  }
+
   const shortDate = iso => new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
 
-  function movieItem(m) {
-    const by = m.list === "watched" && m.watched ? shortDate(m.watched) : `added by ${m.by}`;
-    const li = el("li", {}, [el("span", { className: "title", textContent: m.title }), el("span", { className: "by", textContent: by })]);
-    if (m.list === "bucket") {
-      const seen = el("button", { type: "button", className: "seen", textContent: "✓ watched", title: "We watched it" });
-      seen.addEventListener("click", async () => {
-        seen.disabled = true;
-        try { await api(`/movies/${m.id}/watched`, {}); loadMovies(); }
-        catch { seen.disabled = false; }
-      });
-      li.append(seen);
-    }
-    // two clicks, like removing a letter
-    const remove = el("button", { type: "button", textContent: "×" });
-    remove.setAttribute("aria-label", `Remove ${m.title}`);
-    remove.addEventListener("click", async () => {
-      if (remove.textContent === "×") { remove.textContent = "remove?"; return; }
-      remove.disabled = true;
-      try { await api(`/movies/${m.id}/delete`, {}); li.remove(); }
-      catch { remove.disabled = false; }
+  // two clicks, so nothing goes from a slip
+  function removeButton(m, item) {
+    const b = el("button", { type: "button", className: "remove", textContent: "remove" });
+    b.addEventListener("click", async () => {
+      if (b.textContent === "remove") { b.textContent = "sure? remove it"; return; }
+      b.disabled = true;
+      try { await api(`/movies/${m.id}/delete`, {}); item.remove(); toast(`Removed ${m.title}.`); counts(); }
+      catch (e) { b.disabled = false; toast(e.message); }
     });
-    li.append(remove);
+    return b;
+  }
+
+  function ticket(m) {
+    const li = el("li");
+    const seen = el("button", { type: "button", className: "pill red", textContent: "✓ we watched it" });
+    const meta = [m.year, `added by ${m.by}`].filter(Boolean).join(", ");
+    const t = el("div", { className: "ticket" }, [el("div", { className: "paper" }, [
+      el("div", { className: "front" }, [
+        poster(m, 140),
+        el("div", { className: "info" }, [
+          el("span", { className: "name", textContent: m.title }),
+          el("span", { className: "meta", textContent: meta }),
+          removeButton(m, li),
+        ]),
+      ]),
+      el("div", { className: "stub" }, [el("span", { className: "admit", innerHTML: "admit<br>two" }), seen]),
+    ])]);
+    seen.addEventListener("click", async () => {
+      seen.disabled = true;
+      t.classList.add("tearing");
+      try {
+        await Promise.all([api(`/movies/${m.id}/watched`, {}), new Promise(r => setTimeout(r, 550))]);
+        toast(`${m.title} goes on the watched side.`);
+        loadMovies();
+      } catch (e) {
+        t.classList.remove("tearing");
+        seen.disabled = false;
+        toast(e.message);
+      }
+    });
+    li.append(t);
     return li;
   }
 
+  function stub(m) {
+    const li = el("li");
+    li.append(
+      el("div", { className: "shadow" }, [el("div", { className: "card" }, [
+        poster(m, 300),
+        el("span", { className: "name", textContent: m.title }),
+        el("span", { className: "meta", textContent: m.year ? String(m.year) : "" }),
+      ])]),
+      el("span", { className: "stamp", innerHTML: m.watched ? `हेर्यौं<br>${shortDate(m.watched)}` : "हेर्यौं ✓" }),
+      removeButton(m, li),
+    );
+    return li;
+  }
+
+  function counts() {
+    const n = id => $(id).querySelectorAll("li").length;
+    $("bucket-count").textContent = n("movies-bucket") ? `(${n("movies-bucket")})` : "";
+    $("watched-count").textContent = n("movies-watched") ? `(${n("movies-watched")})` : "";
+  }
+
+  let onList = [];
   async function loadMovies() {
     try {
       const { movies } = await api("/movies");
-      for (const list of ["watched", "bucket"]) {
-        const items = movies.filter(m => m.list === list).map(movieItem);
-        $("movies-" + list).replaceChildren(...(items.length ? items : [el("li", { className: "none", textContent: "nothing yet" })]));
-      }
+      onList = movies;
+      const bucket = movies.filter(m => m.list === "bucket").map(ticket);
+      // newest watched first
+      const watched = movies.filter(m => m.list === "watched").sort((a, b) => (b.watched ?? "").localeCompare(a.watched ?? "")).map(stub);
+      $("movies-bucket").replaceChildren(...bucket);
+      $("movies-watched").replaceChildren(...watched);
+      if (!bucket.length) $("movies-bucket").append(el("li", { className: "empty", textContent: "Nothing to watch yet. Find one above." }));
+      if (!watched.length) $("movies-watched").append(el("li", { className: "empty", textContent: "No stubs yet. Tick a ticket once we've seen it." }));
+      counts();
       $("movies").hidden = false;
       $("lock").hidden = true;
       return true;
@@ -241,26 +453,67 @@
     }
   }
 
-  for (const form of document.querySelectorAll(".movie-add")) {
-    form.addEventListener("submit", async e => {
-      e.preventDefault();
-      const input = form.querySelector("input");
-      const title = input.value.trim();
-      if (!title) return;
-      form.querySelector(".error")?.remove();
-      input.disabled = true;
-      try {
-        await api("/movies", { title, list: form.dataset.list });
-        input.value = "";
-        loadMovies();
-      } catch (err) {
-        form.append(el("span", { className: "error", textContent: err.message }));
-      } finally {
-        input.disabled = false;
-        input.focus();
-      }
-    });
+  // ---- search -------------------------------------------------------------
+
+  const search = $("search");
+  const results = $("results");
+
+  async function add(movie, list) {
+    try {
+      await api("/movies", { ...movie, list });
+      toast(list === "watched" ? `${movie.title} is on the watched side.` : `${movie.title} is on the to-watch list.`);
+      search.value = "";
+      results.hidden = true;
+      loadMovies();
+    } catch (e) {
+      toast(e.message);
+    }
   }
+
+  function addButtons(movie) {
+    const later = el("button", { type: "button", className: "pill", textContent: "हेर्न बाँकी" });
+    const done = el("button", { type: "button", className: "pill red", textContent: "हेरिसक्यौं" });
+    later.addEventListener("click", () => { later.disabled = done.disabled = true; add(movie, "bucket"); });
+    done.addEventListener("click", () => { later.disabled = done.disabled = true; add(movie, "watched"); });
+    return el("div", { className: "add" }, [later, done]);
+  }
+
+  function row(movie) {
+    const already = onList.find(m => (movie.imdb && m.imdb === movie.imdb) || m.title.toLowerCase() === movie.title.toLowerCase());
+    const bits = [movie.year, movie.series && "series", movie.stars].filter(Boolean).join(", ");
+    return el("li", {}, [
+      poster(movie, 88),
+      el("span", { className: "what" }, [el("b", { textContent: movie.title }), el("small", { textContent: bits })]),
+      already ? el("small", { className: "meta", textContent: already.list === "watched" ? "watched ✓" : "on our list" }) : addButtons(movie),
+    ]);
+  }
+
+  let searchTimer, lastQuery = "";
+  search.addEventListener("input", () => {
+    clearTimeout(searchTimer);
+    const q = search.value.trim();
+    if (q.length < 2) { results.hidden = true; return; }
+    searchTimer = setTimeout(async () => {
+      lastQuery = q;
+      let found = [], problem = "";
+      try { ({ results: found } = await api("/movies/search?q=" + encodeURIComponent(q))); }
+      catch (e) { problem = e.message; }
+      if (q !== lastQuery) return;  // a newer search is on its way
+      const typed = { title: q };
+      results.replaceChildren(
+        ...found.map(row),
+        ...(problem ? [el("li", { className: "note", textContent: problem })] : []),
+        ...(!found.length && !problem ? [el("li", { className: "note", textContent: "No movie by that name. Add it as you wrote it:" })] : []),
+        ...(!found.some(f => f.title.toLowerCase() === q.toLowerCase()) ? [row({ ...typed, stars: "as written" })] : []),
+      );
+      results.hidden = false;
+    }, 300);
+  });
+  search.addEventListener("keydown", e => { if (e.key === "Escape") { results.hidden = true; search.blur(); } });
+  document.addEventListener("click", e => { if (!e.target.closest(".finder")) results.hidden = true; });
+  search.addEventListener("focus", () => { if (results.children.length && search.value.trim().length > 1) results.hidden = false; });
+
+  // ---- unlocking ----------------------------------------------------------
 
   $("form").addEventListener("submit", async e => {
     e.preventDefault();
@@ -271,7 +524,7 @@
   });
 
   // Pick up what the other one adds without a reload
-  setInterval(() => { if (!document.hidden && !$("movies").hidden) loadMovies(); }, 60000);
+  setInterval(() => { if (!document.hidden && !$("movies").hidden && results.hidden) loadMovies(); }, 60000);
   document.addEventListener("visibilitychange", () => { if (!document.hidden && !$("movies").hidden) loadMovies(); });
 
   if (password) loadMovies();
