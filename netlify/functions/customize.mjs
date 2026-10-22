@@ -11,6 +11,10 @@
 //   POST /api/movies {title, list, year, poster, imdb} -> adds a movie to "watched" or "bucket"
 //   POST /api/movies/<id>/watched   -> moves a bucket-list movie to watched
 //   POST /api/movies/<id>/delete    -> removes a movie
+//   GET  /api/pictures        -> our pictures, newest taken first
+//   POST /api/pictures {photo, thumb, caption, taken} -> adds a picture (both base64 JPEGs)
+//   GET  /api/pictures/<id>/photo, /api/pictures/<id>/thumb -> the picture, or its small copy
+//   POST /api/pictures/<id>/delete  -> removes a picture, only by the one who added it
 import Anthropic from "@anthropic-ai/sdk";
 import { getStore } from "@netlify/blobs";
 import { createHash, timingSafeEqual } from "node:crypto";
@@ -19,7 +23,9 @@ import { DEFAULT_SETTINGS, RESPONSE_SCHEMA, SYSTEM_PROMPT, applyChanges, sanitiz
 const ALLOWED_ORIGINS = ["https://source-shrabya.github.io"];
 const HISTORY_LIMIT = 20;   // versions kept for undo
 const MAX_TEXT = 20000;     // characters in a typed letter
-const MAX_PHOTO = 4 << 20;  // bytes in a letter photo
+const MAX_PHOTO = 4 << 20;  // bytes in a letter photo or a picture
+const MAX_THUMB = 1 << 19;  // bytes in a picture's small copy
+const MAX_CAPTION = 300;    // characters under a picture
 const client = new Anthropic(); // reads ANTHROPIC_API_KEY
 
 const cors = origin => ({
@@ -76,6 +82,34 @@ async function addLetter(store, from, { text, photo }) {
   if (bytes) await store.set(`photo-${letter.id}`, bytes);
   await store.setJSON("letters", [letter, ...await lettersIn(store)]);
   return letter;
+}
+
+// Pictures: one list with the details, and each picture and its small copy stored on their own.
+const picturesIn = async store => (await store.get("pictures", { type: "json" })) ?? [];
+// JPEG files start FF D8 FF
+const jpeg = (b64, max) => {
+  if (typeof b64 !== "string" || !b64) return null;
+  const bytes = Buffer.from(b64, "base64");
+  return bytes.length <= max && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff ? bytes : null;
+};
+const dayOk = d => typeof d === "string" && /^\d{4}-\d{2}-\d{2}$/.test(d) && !Number.isNaN(Date.parse(d));
+const newestFirst = (a, b) => b.taken.localeCompare(a.taken) || b.added.localeCompare(a.added);
+
+async function addPicture(store, by, { photo, thumb, caption, taken }) {
+  const big = jpeg(photo, MAX_PHOTO), small = jpeg(thumb, MAX_THUMB);
+  if (!big || !small) return null;
+  const added = new Date().toISOString();
+  const picture = {
+    id: newId(),
+    by,
+    added,
+    taken: dayOk(taken) ? taken : added.slice(0, 10),
+    caption: typeof caption === "string" ? caption.trim().slice(0, MAX_CAPTION) : "",
+  };
+  await store.set(`picture-${picture.id}`, big);
+  await store.set(`picture-thumb-${picture.id}`, small);
+  await store.setJSON("pictures", [picture, ...await picturesIn(store)].sort(newestFirst));
+  return picture;
 }
 
 // Movies: one list. The first time it is read it starts with what we had already
@@ -177,6 +211,7 @@ export default async (req) => {
   const route = new URL(req.url).pathname.replace(/^\/api\//, "");
   const [, letterId, letterAction] = route.match(/^letters\/([a-z0-9]+)\/(photo|delete)$/) ?? [];
   const [, movieId, movieAction] = route.match(/^movies\/([a-z0-9]+)\/(watched|delete)$/) ?? [];
+  const [, pictureId, pictureAction] = route.match(/^pictures\/([a-z0-9]+)\/(photo|thumb|delete)$/) ?? [];
 
   try {
     if (req.method === "GET" && route === "settings") return send({ settings: await load(store), me });
@@ -192,7 +227,29 @@ export default async (req) => {
       if (!bytes) return send({ error: "not found" }, 404);
       return new Response(bytes, { headers: { ...cors(origin), "Content-Type": "image/jpeg", "Cache-Control": "private, max-age=31536000" } });
     }
+    if (req.method === "GET" && route === "pictures") return send({ pictures: await picturesIn(store) });
+    if (req.method === "GET" && (pictureAction === "photo" || pictureAction === "thumb")) {
+      const bytes = await store.get(`picture-${pictureAction === "thumb" ? "thumb-" : ""}${pictureId}`, { type: "arrayBuffer" });
+      if (!bytes) return send({ error: "not found" }, 404);
+      return new Response(bytes, { headers: { ...cors(origin), "Content-Type": "image/jpeg", "Cache-Control": "private, max-age=31536000" } });
+    }
     if (req.method !== "POST") return send({ error: "not found" }, 404);
+
+    if (route === "pictures") {
+      const picture = await addPicture(store, me, await req.json());
+      if (!picture) return send({ error: "That picture didn't come through. Try it again." }, 400);
+      return send({ picture });
+    }
+    if (pictureAction === "delete") {
+      const pictures = await picturesIn(store);
+      const picture = pictures.find(p => p.id === pictureId);
+      if (!picture) return send({ error: "That picture is already gone." }, 404);
+      if (picture.by !== me) return send({ error: "Only the one who added it can remove it." }, 403);
+      await store.setJSON("pictures", pictures.filter(p => p.id !== pictureId));
+      await store.delete(`picture-${pictureId}`);
+      await store.delete(`picture-thumb-${pictureId}`);
+      return send({ ok: true });
+    }
 
     if (route === "letters") {
       const letter = await addLetter(store, me, await req.json());

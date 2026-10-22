@@ -1,0 +1,633 @@
+<!doctype html>
+<html lang="ne">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>हाम्रा तस्बिरहरू</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Kalam:wght@300;400;700&display=swap" rel="stylesheet">
+<style>
+  /* The same notebook paper as the letter page. Our pictures are polaroids taped to it,
+     grouped by the month they were taken, newest first. */
+  :root {
+    --paper: #c3b9a7;
+    --rule: color-mix(in srgb, #5c6876 55%, transparent);
+    --margin: color-mix(in srgb, #c47868 70%, transparent);
+    --ink: #1d2a50;
+    --ink-soft: #55608a;
+    --stamp: #a3333f;
+    --polaroid: #fbf8f1;
+    --gap: 44px;
+  }
+  * { box-sizing: border-box; }
+  html {
+    min-height: 100%;
+    background-color: var(--paper);
+    background-image:
+      linear-gradient(to right, transparent 119px, var(--margin) 119px, var(--margin) 121px, transparent 121px),
+      linear-gradient(to bottom, transparent calc(var(--gap) - 2px), var(--rule) calc(var(--gap) - 2px), var(--rule) var(--gap));
+    background-size: 100% 100%, 100% var(--gap);
+    background-repeat: no-repeat, repeat;
+  }
+  body {
+    margin: 0;
+    min-height: 100dvh;
+    color: var(--ink);
+    font: 400 20px/1.4 "Kalam", "Comic Sans MS", cursive;
+    overflow-x: hidden;
+  }
+  button, input { font: inherit; color: inherit; }
+  :focus-visible { outline: 2px dashed var(--stamp); outline-offset: 3px; }
+
+  .back {
+    position: fixed;
+    left: 20px;
+    bottom: 20px;
+    z-index: 10;
+    padding: 10px 18px;
+    border-radius: 999px;
+    background: var(--stamp);
+    color: #f6efe2;
+    font-size: 20px;
+    line-height: 1;
+    text-decoration: none;
+    box-shadow: 0 4px 14px rgba(140, 47, 59, .35);
+  }
+
+  /* Asked only when the letter page was not opened first in this tab */
+  .lock { padding: var(--gap) 24px 0 140px; font-weight: 300; font-size: 24px; line-height: var(--gap); }
+  .lock[hidden] { display: none; }
+  .lock p, .lock form { margin: 0; }
+  .lock form { display: flex; align-items: center; gap: 14px; }
+  .lock input, .lock button { background: transparent; border: 0; outline: none; height: var(--gap); }
+  .lock input { width: 220px; letter-spacing: 2px; }
+  .lock button { cursor: pointer; text-decoration: underline; text-underline-offset: 6px; }
+  .lock .error { color: var(--stamp); min-height: var(--gap); }
+
+  .album { width: min(1080px, 100vw - 32px); margin: 0 auto; padding: 36px 0 140px; }
+  .album[hidden] { display: none; }
+  .album h1 {
+    margin: 0;
+    font-size: clamp(44px, 7vw, 68px);
+    line-height: 1.1;
+    font-weight: 700;
+    text-align: center;
+    transform: rotate(-2deg);
+  }
+  .album .sub { margin: 6px 0 0; text-align: center; color: var(--ink-soft); font-weight: 300; }
+
+  .pill {
+    border: 1.5px solid var(--ink);
+    border-radius: 999px;
+    background: transparent;
+    padding: 0 14px;
+    font-size: 17px;
+    line-height: 32px;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+  .pill:hover { background: var(--ink); color: #fbf6ea; }
+  .pill.red { border-color: var(--stamp); color: var(--stamp); }
+  .pill.red:hover, .pill.red.solid { background: var(--stamp); color: #fbf6ea; }
+  .pill:disabled { opacity: .5; cursor: default; }
+  .plain {
+    border: 0;
+    background: none;
+    padding: 2px 0;
+    font-size: 15px;
+    color: var(--ink-soft);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    cursor: pointer;
+  }
+
+  /* a bit of masking tape at the top of each polaroid */
+  .tape::before {
+    content: "";
+    position: absolute;
+    z-index: 1;
+    top: -11px;
+    left: 50%;
+    width: 78px;
+    height: 22px;
+    transform: translateX(-50%) rotate(var(--tape, 3deg));
+    background: rgba(240, 232, 205, .8);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, .12);
+  }
+
+  /* The picker: an empty polaroid waiting for pictures */
+  .drop {
+    position: relative;
+    display: block;
+    width: min(300px, 100%);
+    margin: 40px auto 0;
+    padding: 12px 12px 0;
+    background: var(--polaroid);
+    box-shadow: 0 2px 4px rgba(40, 30, 20, .25), 0 8px 20px rgba(40, 30, 20, .18);
+    transform: rotate(-2deg);
+    transition: transform .2s ease;
+    cursor: pointer;
+  }
+  .drop:hover, .drop.over { transform: rotate(0deg) scale(1.03); }
+  .drop:focus-within { outline: 2px dashed var(--stamp); outline-offset: 4px; }
+  .drop input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+  .drop .frame {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    aspect-ratio: 4 / 3;
+    padding: 12px;
+    border: 2px dashed rgba(29, 42, 80, .3);
+    background: #efe9dc;
+    text-align: center;
+  }
+  .drop.over .frame { border-color: var(--stamp); background: #f6e3e0; }
+  .drop .frame svg { width: 46px; height: 46px; color: var(--stamp); transform: rotate(-8deg); }
+  .drop .frame b { font-weight: 400; font-size: 21px; line-height: 1.2; }
+  .drop .frame small { font-size: 15px; color: var(--ink-soft); }
+  .drop .caption { display: block; text-align: center; font-size: 19px; line-height: 46px; color: #333; }
+
+  /* Pictures picked but not stuck on yet, each with its caption and date */
+  .tray { margin: 48px 0 0; }
+  .tray[hidden] { display: none; }
+  .tray h2 { margin: 0 0 22px; font-size: 30px; line-height: 1.2; font-weight: 400; }
+  .tray ul { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 230px), 1fr)); gap: 34px 26px; margin: 0; padding: 0; list-style: none; }
+  .tray li { position: relative; display: flex; flex-direction: column; gap: 6px; padding: 10px 10px 12px; background: var(--polaroid); box-shadow: 0 2px 4px rgba(40, 30, 20, .22), 0 6px 14px rgba(40, 30, 20, .14); }
+  .tray img { width: 100%; aspect-ratio: 1; object-fit: cover; background: #222; }
+  .tray input { width: 100%; border: 0; border-bottom: 1.5px dashed rgba(29, 42, 80, .3); background: transparent; font-size: 18px; padding: 2px 0; outline: none; }
+  .tray input:focus { border-bottom-color: var(--stamp); }
+  .tray input[type="date"] { font-size: 16px; color: var(--ink-soft); }
+  .tray .off { position: absolute; top: 4px; right: 6px; z-index: 2; width: 30px; height: 30px; border: 0; border-radius: 50%; background: rgba(251, 248, 241, .9); font-size: 20px; line-height: 1; cursor: pointer; }
+  .tray .state { font-size: 15px; color: var(--ink-soft); min-height: 1.3em; }
+  .tray .state.bad { color: var(--stamp); }
+  .tray .buttons { display: flex; align-items: center; justify-content: center; gap: 22px; margin-top: 30px; }
+
+  /* The wall, one shelf per month */
+  .month { margin-top: 64px; }
+  .month h2 { margin: 0 0 24px; font-size: 34px; line-height: 1.2; font-weight: 400; }
+  .month h2 span { font-size: 18px; color: var(--ink-soft); font-weight: 300; }
+  .wall { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr)); gap: 40px 28px; margin: 0; padding: 0; list-style: none; }
+  .wall li:nth-child(5n+1) { --tilt: -2.2deg; --tape: 4deg; }
+  .wall li:nth-child(5n+2) { --tilt: 1.6deg; --tape: -3deg; }
+  .wall li:nth-child(5n+3) { --tilt: -.6deg; --tape: 2deg; }
+  .wall li:nth-child(5n+4) { --tilt: 2.4deg; --tape: -5deg; }
+  .wall li:nth-child(5n+5) { --tilt: -1.4deg; --tape: 1deg; }
+  .wall button {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    padding: 10px 10px 0;
+    border: 0;
+    background: var(--polaroid);
+    box-shadow: 0 2px 4px rgba(40, 30, 20, .22), 0 6px 14px rgba(40, 30, 20, .14);
+    transform: rotate(var(--tilt));
+    transition: transform .2s ease, box-shadow .2s ease;
+    text-align: center;
+    cursor: zoom-in;
+  }
+  .wall button:hover { transform: rotate(0deg) scale(1.04); box-shadow: 0 4px 8px rgba(40, 30, 20, .22), 0 14px 28px rgba(40, 30, 20, .2); z-index: 2; }
+  .wall .shot { display: block; width: 100%; aspect-ratio: 1; object-fit: cover; background: #d9d2c4; }
+  .wall .words { display: block; min-height: 52px; padding: 8px 2px 10px; font-size: 18px; line-height: 1.25; color: #333; overflow-wrap: anywhere; }
+  .wall .words small { display: block; font-size: 14px; color: var(--ink-soft); }
+  .empty { margin-top: 56px; text-align: center; color: var(--ink-soft); font-weight: 300; }
+
+  /* One picture, big */
+  .viewer {
+    width: 100vw;
+    max-width: 100vw;
+    height: 100dvh;
+    max-height: 100dvh;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--ink);
+  }
+  .viewer::backdrop { background: rgba(20, 18, 28, .82); }
+  .viewer[open] { display: grid; place-items: center; }
+  .viewer figure {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    max-width: calc(100vw - 32px);
+    margin: 0;
+    padding: 14px 14px 0;
+    background: var(--polaroid);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, .5);
+  }
+  .viewer img { display: block; max-width: calc(100vw - 60px); max-height: calc(100dvh - 190px); object-fit: contain; background: #222; }
+  .viewer figcaption { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 18px; padding: 10px 4px 12px; }
+  .viewer .text { flex: 1 1 260px; max-width: 60ch; font-size: 21px; line-height: 1.3; overflow-wrap: anywhere; }
+  .viewer .meta { font-size: 15px; color: var(--ink-soft); }
+  .viewer .close, .viewer .step {
+    position: fixed;
+    display: grid;
+    place-items: center;
+    width: 48px;
+    height: 48px;
+    border: 0;
+    border-radius: 50%;
+    background: rgba(251, 248, 241, .92);
+    color: var(--ink);
+    font-size: 26px;
+    line-height: 1;
+    cursor: pointer;
+  }
+  .viewer .close { top: 16px; right: 16px; }
+  .viewer .step { top: 50%; transform: translateY(-50%); }
+  .viewer .prev { left: 16px; }
+  .viewer .next { right: 16px; }
+  .viewer .step:disabled { opacity: 0; pointer-events: none; }
+
+  .toast {
+    position: fixed;
+    left: 50%;
+    bottom: 24px;
+    z-index: 20;
+    transform: translateX(-50%);
+    padding: 8px 18px;
+    border-radius: 999px;
+    background: var(--ink);
+    color: #fbf6ea;
+    font-size: 17px;
+    box-shadow: 0 6px 20px rgba(29, 42, 80, .3);
+  }
+  .toast[hidden] { display: none; }
+
+  @media (max-width: 600px) {
+    .lock { padding-left: 24px; font-size: 21px; }
+    .album { padding-top: 20px; }
+    .wall { grid-template-columns: repeat(2, 1fr); gap: 30px 18px; }
+    .wall .words { font-size: 16px; min-height: 44px; }
+    .viewer .step { top: auto; bottom: 16px; transform: none; }
+    .viewer img { max-height: calc(100dvh - 240px); }
+    .back { left: 14px; bottom: 14px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .drop, .wall button { transition: none; }
+  }
+</style>
+</head>
+<body>
+
+<section class="lock" id="lock" hidden>
+  <p>हाम्रा तस्बिरहरू हेर्न password:</p>
+  <form id="form" autocomplete="off">
+    <input id="pw" type="password" placeholder="..........." aria-label="Password">
+    <button id="btn" type="submit">खोल</button>
+  </form>
+  <p class="error" id="err" role="alert"></p>
+</section>
+
+<main class="album" id="album" hidden>
+  <h1>हाम्रा तस्बिरहरू</h1>
+  <p class="sub">every picture of us, kept in one place</p>
+
+  <label class="drop tape" id="drop">
+    <input id="pick" type="file" accept="image/*" multiple>
+    <span class="frame">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="15" rx="2"/><circle cx="12" cy="12.5" r="3.5"/><path d="M8 5l1.5-2h5L16 5"/></svg>
+      <b>stick our pictures here</b>
+      <small>tap to pick, or drop them on</small>
+    </span>
+    <span class="caption">as many as you like</span>
+  </label>
+
+  <section class="tray" id="tray" hidden>
+    <h2>ready to stick on</h2>
+    <ul id="tray-list"></ul>
+    <div class="buttons">
+      <button class="pill red solid" id="stick" type="button">टाँस</button>
+      <button class="plain" id="tray-cancel" type="button">Cancel</button>
+    </div>
+  </section>
+
+  <div id="months"></div>
+</main>
+
+<dialog class="viewer" id="viewer" aria-label="Picture">
+  <figure>
+    <img id="view-img" alt="">
+    <figcaption>
+      <span class="text" id="view-text"></span>
+      <span class="meta" id="view-meta"></span>
+      <button class="plain" id="view-remove" type="button" hidden>remove</button>
+    </figcaption>
+  </figure>
+  <button class="close" id="view-close" type="button" aria-label="Close">×</button>
+  <button class="step prev" id="view-prev" type="button" aria-label="Newer picture">‹</button>
+  <button class="step next" id="view-next" type="button" aria-label="Older picture">›</button>
+</dialog>
+
+<p class="toast" id="toast" role="status" hidden></p>
+<a class="back" href="./">← चिठी</a>
+
+<script>
+  const API = "https://for-aarya-bot.netlify.app/api";
+  const $ = id => document.getElementById(id);
+  const remember = {
+    get: () => { try { return sessionStorage.getItem("letter-password") ?? ""; } catch { return ""; } },
+    set: v => { try { sessionStorage.setItem("letter-password", v); } catch { /* private window */ } },
+  };
+  let password = remember.get();
+  let me = "";
+
+  function el(tag, props = {}, kids = []) {
+    const node = Object.assign(document.createElement(tag), props);
+    node.append(...kids);
+    return node;
+  }
+
+  async function api(path, body) {
+    const res = await fetch(API + path, {
+      method: body ? "POST" : "GET",
+      headers: { "x-letter-password": password, ...(body ? { "content-type": "application/json" } : {}) },
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw Object.assign(new Error(data.error || "Something went wrong. Try again."), { status: res.status });
+    return data;
+  }
+
+  let toastTimer;
+  function toast(text) {
+    $("toast").textContent = text;
+    $("toast").hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { $("toast").hidden = true; }, 2600);
+  }
+
+  // The pictures need the password, so they are fetched here and kept as object URLs.
+  const urls = new Map();  // "<id>/thumb" or "<id>/photo" -> object URL
+  async function imageUrl(id, size) {
+    const key = `${id}/${size}`;
+    if (!urls.has(key)) {
+      const res = await fetch(`${API}/pictures/${key}`, { headers: { "x-letter-password": password } });
+      if (!res.ok) throw new Error("picture missing");
+      urls.set(key, URL.createObjectURL(await res.blob()));
+    }
+    return urls.get(key);
+  }
+  // small copies load as they come near the screen
+  const nearby = new IntersectionObserver(entries => {
+    for (const { isIntersecting, target } of entries) {
+      if (!isIntersecting) continue;
+      nearby.unobserve(target);
+      imageUrl(target.dataset.id, "thumb").then(url => { target.src = url; }).catch(() => { target.alt = "This picture could not load."; });
+    }
+  }, { rootMargin: "400px" });
+
+  const day = iso => new Date(iso + "T12:00").toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
+  const monthOf = iso => new Date(iso + "T12:00").toLocaleDateString("en-GB", { month: "long", year: "numeric" });
+
+  // ---- the wall -----------------------------------------------------------
+
+  let pictures = [];
+
+  function polaroid(p, index) {
+    const img = el("img", { className: "shot", alt: p.caption || `A picture from ${day(p.taken)}` });
+    img.dataset.id = p.id;
+    nearby.observe(img);
+    const button = el("button", { type: "button", className: "tape" }, [
+      img,
+      el("span", { className: "words" }, [p.caption, el("small", { textContent: day(p.taken) })]),
+    ]);
+    button.addEventListener("click", () => show(index));
+    return el("li", {}, [button]);
+  }
+
+  function drawWall() {
+    const months = [];
+    pictures.forEach((p, i) => {
+      const name = monthOf(p.taken);
+      if (months.at(-1)?.name !== name) months.push({ name, items: [] });
+      months.at(-1).items.push(polaroid(p, i));
+    });
+    $("months").replaceChildren(...months.map(m => el("section", { className: "month" }, [
+      el("h2", {}, [m.name + " ", el("span", { textContent: `(${m.items.length})` })]),
+      el("ul", { className: "wall" }, m.items),
+    ])));
+    if (!pictures.length) $("months").append(el("p", { className: "empty", textContent: "No pictures yet. Stick the first one on." }));
+  }
+
+  async function loadPictures() {
+    try {
+      const [{ pictures: list }, { me: who }] = await Promise.all([api("/pictures"), me ? { me } : api("/settings")]);
+      me = who ?? "";
+      if (JSON.stringify(list) !== JSON.stringify(pictures)) { pictures = list; drawWall(); }
+      else if (!$("months").children.length) drawWall();
+      $("album").hidden = false;
+      $("lock").hidden = true;
+      return true;
+    } catch (e) {
+      if (e.status === 401) {
+        remember.set("");
+        $("album").hidden = true;
+        $("lock").hidden = false;
+        $("pw").focus();
+      } else if ($("album").hidden) {
+        // server asleep or offline: say so, and the खोल button tries again
+        $("lock").hidden = false;
+        $("err").textContent = "The server isn't answering. Try खोल again in a minute.";
+      }
+      return false;
+    }
+  }
+
+  // ---- one picture, big ---------------------------------------------------
+
+  const viewer = $("viewer");
+  let showing = -1;
+
+  async function show(index) {
+    const p = pictures[index];
+    if (!p) return;
+    showing = index;
+    const img = $("view-img");
+    img.alt = p.caption || `A picture from ${day(p.taken)}`;
+    // the small copy straight away, the full one once it arrives
+    img.src = urls.get(`${p.id}/thumb`) ?? "";
+    $("view-text").textContent = p.caption;
+    $("view-meta").textContent = `${day(p.taken)}, added by ${p.by}`;
+    $("view-remove").hidden = p.by !== me;
+    $("view-remove").textContent = "remove";
+    $("view-prev").disabled = index === 0;
+    $("view-next").disabled = index === pictures.length - 1;
+    if (!viewer.open) viewer.showModal();
+    try {
+      const url = await imageUrl(p.id, "photo");
+      if (showing === index) img.src = url;
+    } catch {
+      if (showing === index) toast("The big picture could not load.");
+    }
+  }
+
+  $("view-close").addEventListener("click", () => viewer.close());
+  $("view-prev").addEventListener("click", () => show(showing - 1));
+  $("view-next").addEventListener("click", () => show(showing + 1));
+  viewer.addEventListener("click", e => { if (e.target === viewer) viewer.close(); });
+  viewer.addEventListener("close", () => { showing = -1; });
+  viewer.addEventListener("keydown", e => {
+    if (e.key === "ArrowLeft" && showing > 0) show(showing - 1);
+    if (e.key === "ArrowRight" && showing < pictures.length - 1) show(showing + 1);
+  });
+
+  // two clicks, so nothing goes from a slip
+  $("view-remove").addEventListener("click", async () => {
+    const b = $("view-remove");
+    if (b.textContent === "remove") { b.textContent = "sure? remove it"; return; }
+    const p = pictures[showing];
+    b.disabled = true;
+    try {
+      await api(`/pictures/${p.id}/delete`, {});
+      pictures = pictures.filter(x => x.id !== p.id);
+      viewer.close();
+      drawWall();
+      toast("Taken off the wall.");
+    } catch (e) {
+      toast(e.message);
+    } finally {
+      b.disabled = false;
+    }
+  });
+
+  // ---- adding pictures ----------------------------------------------------
+
+  // The day a phone photo was taken is in its EXIF data (DateTimeOriginal).
+  // Returns "YYYY-MM-DD", or "" when the file has none.
+  async function takenOn(file) {
+    try {
+      const v = new DataView(await file.slice(0, 256 * 1024).arrayBuffer());
+      if (v.getUint16(0) !== 0xffd8) return "";
+      let at = 2;
+      while (at + 4 < v.byteLength && v.getUint8(at) === 0xff) {
+        const marker = v.getUint8(at + 1), size = v.getUint16(at + 2);
+        if (marker === 0xe1 && v.getUint32(at + 4) === 0x45786966) {  // "Exif"
+          const tiff = at + 10, little = v.getUint16(tiff) === 0x4949;
+          const u16 = o => v.getUint16(tiff + o, little), u32 = o => v.getUint32(tiff + o, little);
+          const tags = ifd => {
+            const found = {};
+            for (let i = 0, n = u16(ifd); i < n; i++) found[u16(ifd + 2 + i * 12)] = ifd + 2 + i * 12;
+            return found;
+          };
+          const ascii = entry => {
+            const off = u32(entry + 8);
+            return Array.from({ length: 10 }, (_, i) => String.fromCharCode(v.getUint8(tiff + off + i))).join("");
+          };
+          const top = tags(u32(4));
+          const sub = top[0x8769] ? tags(u32(top[0x8769] + 8)) : {};
+          const entry = sub[0x9003] ?? sub[0x9004] ?? top[0x0132];
+          const date = entry ? ascii(entry).replace(/:/g, "-") : "";
+          return /^\d{4}-\d{2}-\d{2}$/.test(date) && date > "1990" ? date : "";
+        }
+        at += 2 + size;
+      }
+    } catch { /* not readable: fall back below */ }
+    return "";
+  }
+
+  // Shrink to a JPEG no longer than `side` on the long side, as base64.
+  async function shrink(bitmap, side, quality) {
+    const scale = Math.min(1, side / Math.max(bitmap.width, bitmap.height));
+    const canvas = el("canvas", { width: Math.round(bitmap.width * scale), height: Math.round(bitmap.height * scale) });
+    canvas.getContext("2d").drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    const blob = await new Promise(done => canvas.toBlob(done, "image/jpeg", quality));
+    const dataUrl = await new Promise(done => {
+      const reader = new FileReader();
+      reader.onload = () => done(reader.result);
+      reader.readAsDataURL(blob);
+    });
+    return dataUrl.slice(dataUrl.indexOf(",") + 1);
+  }
+
+  let waiting = [];  // { file, preview, caption, date, state, li }
+
+  async function addToTray(files) {
+    const photos = [...files].filter(f => f.type.startsWith("image/"));
+    if (photos.length < files.length) toast("Only pictures can go on the wall.");
+    for (const file of photos) {
+      const today = new Date().toISOString().slice(0, 10);
+      const fromFile = file.lastModified ? new Date(file.lastModified).toISOString().slice(0, 10) : today;
+      const item = { file, preview: URL.createObjectURL(file) };
+      item.caption = el("input", { type: "text", maxLength: 300, placeholder: "write something under it...", ariaLabel: "Caption" });
+      item.date = el("input", { type: "date", value: (await takenOn(file)) || fromFile, max: today, ariaLabel: "Day it was taken" });
+      item.state = el("span", { className: "state" });
+      const off = el("button", { type: "button", className: "off", textContent: "×", ariaLabel: "Take this one off" });
+      item.li = el("li", { className: "tape" }, [off, el("img", { src: item.preview, alt: "" }), item.caption, item.date, item.state]);
+      off.addEventListener("click", () => dropFromTray(item));
+      waiting.push(item);
+      $("tray-list").append(item.li);
+    }
+    $("tray").hidden = !waiting.length;
+    if (photos.length) waiting.at(-photos.length).caption.focus({ preventScroll: true });
+    $("tray").scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  function dropFromTray(item) {
+    URL.revokeObjectURL(item.preview);
+    item.li.remove();
+    waiting = waiting.filter(w => w !== item);
+    $("tray").hidden = !waiting.length;
+  }
+
+  $("pick").addEventListener("change", () => { addToTray($("pick").files); $("pick").value = ""; });
+  const drop = $("drop");
+  drop.addEventListener("dragover", e => { e.preventDefault(); drop.classList.add("over"); });
+  drop.addEventListener("dragleave", () => drop.classList.remove("over"));
+  drop.addEventListener("drop", e => { e.preventDefault(); drop.classList.remove("over"); addToTray(e.dataTransfer.files); });
+
+  $("tray-cancel").addEventListener("click", () => [...waiting].forEach(dropFromTray));
+
+  // One at a time, so a big batch doesn't go over what the server takes in one request.
+  $("stick").addEventListener("click", async () => {
+    const stick = $("stick");
+    stick.disabled = true;
+    let stuck = 0;
+    for (const item of [...waiting]) {
+      item.state.className = "state";
+      item.state.textContent = "sticking it on...";
+      try {
+        const bitmap = await createImageBitmap(item.file, { imageOrientation: "from-image" });
+        let photo = await shrink(bitmap, 2000, 0.85);
+        if (photo.length > 4_000_000) photo = await shrink(bitmap, 2000, 0.7);  // base64 of about 3 MB
+        const thumb = await shrink(bitmap, 600, 0.8);
+        await api("/pictures", { photo, thumb, caption: item.caption.value, taken: item.date.value });
+        dropFromTray(item);
+        stuck++;
+      } catch (e) {
+        item.state.className = "state bad";
+        item.state.textContent = e.status ? e.message : "This one didn't work. Try a JPEG or PNG.";
+      }
+    }
+    stick.disabled = false;
+    if (stuck) {
+      toast(stuck === 1 ? "On the wall." : `${stuck} pictures on the wall.`);
+      await loadPictures();
+    }
+  });
+
+  // ---- unlocking ----------------------------------------------------------
+
+  $("form").addEventListener("submit", async e => {
+    e.preventDefault();
+    password = $("pw").value.trim();
+    $("err").textContent = "";
+    if (await loadPictures()) remember.set(password);
+    else $("err").textContent = "हैन नि, फेरि लेख त।";
+  });
+
+  // Pick up what the other one adds without a reload
+  const refresh = () => { if (!document.hidden && !$("album").hidden && !viewer.open) loadPictures(); };
+  setInterval(refresh, 60000);
+  document.addEventListener("visibilitychange", refresh);
+
+  if (password) loadPictures();
+  else { $("lock").hidden = false; $("pw").focus(); }
+</script>
+</body>
+</html>

@@ -34,14 +34,20 @@ The "फिल्महरू" button at the bottom left of the letter page goes
 
 The search box at the top looks movies up as you type and shows their posters. The server asks IMDb's search box for this (`/api/movies/search`), which needs no key but is not an official API. If it ever stops answering, a movie can still be added by its name.
 
+## Our pictures
+
+The "तस्बिरहरू" button above "फिल्महरू" goes to `pictures.html`, our picture archive. Pictures hang on the paper as taped polaroids, grouped by the month they were taken, newest first. Clicking one opens it big, with arrows (or the arrow keys) to the next one.
+
+To add pictures, tap the empty polaroid at the top or drop files on it. Several can go at once. Each one waits in a tray with a box for a caption and the day it was taken, which the page reads from the photo's camera data when it has any and from the file's date when it does not. "टाँस" sends them one at a time. The page shrinks each picture to 2000 pixels on the long side, and also sends a 600 pixel copy for the wall so the page loads quickly. Only the one who added a picture can remove it.
+
 Nobody else can see the lists, the letters or the photos: every request to the server needs one of our two passwords, and the server answers a wrong one with "wrong password". The page files on GitHub hold no letters or movies.
 
 The password is kept in the browser tab after the letter opens, so going to the movies page and back does not ask for it again. Closing the tab forgets it.
 
 ## Put it online
 
-Upload `index.html`, `movies.html`, `letter.js` and the `art` folder. Do not upload `letter.jpg`, because that is the unlocked letter.
+Upload `index.html`, `movies.html`, `pictures.html`, `letter.js` and the `art` folder. Do not upload `letter.jpg`, because that is the unlocked letter.
 
-The quickest way is Netlify Drop (app.netlify.com/drop): make a folder with only those three things and drag it onto the page.
+The quickest way is Netlify Drop (app.netlify.com/drop): make a folder with only those things and drag it onto the page.
 
 The pictures in `art` sit down both sides of the letter on a wide screen and move underneath it on a narrow one. They are not locked, so anyone who guesses the address of one can see it. Twelve are used: five chosen by me and seven found on Pinterest.
