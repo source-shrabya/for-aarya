@@ -532,16 +532,67 @@
   }
   .mail .text { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
   .mail img { display: block; width: 100%; height: auto; min-height: 120px; padding: 12px; cursor: zoom-in; }
+  /* Reactions: who reacted with what, and a tray of emoji to pick from */
+  .reacts {
+    position: relative;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 28px 16px;
+    font: 15px/1.2 system-ui, -apple-system, "Segoe UI", sans-serif;
+    color: #555;
+  }
+  .reacts.first { justify-content: center; padding: 0; margin-top: -24px; }
+  .reacts .chip, .reacts .add {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 34px;
+    padding: 0 12px;
+    border: 1.5px solid rgba(29, 42, 80, .2);
+    border-radius: 999px;
+    background: #fbf8f1;
+    font: inherit;
+    color: inherit;
+    cursor: pointer;
+    transition: transform .15s ease;
+  }
+  .reacts .chip:hover, .reacts .add:hover { transform: scale(1.06); }
+  .reacts .chip b { font-size: 19px; font-weight: 400; }
+  .reacts .chip.mine { border-color: #8c2f3b; background: #f6e3e0; color: #8c2f3b; }
+  .reacts .add svg { width: 20px; height: 20px; }
+  .reacts .tray {
+    position: absolute;
+    z-index: 6;
+    top: calc(100% - 8px);
+    display: grid;
+    grid-template-columns: repeat(8, 40px);
+    gap: 2px;
+    padding: 8px;
+    border-radius: 14px;
+    background: #fbf8f1;
+    box-shadow: 0 10px 30px rgba(40, 30, 20, .28);
+  }
+  .reacts .tray[hidden] { display: none; }
+  .reacts .tray button { width: 40px; height: 40px; border: 0; border-radius: 10px; background: none; font-size: 24px; line-height: 1; cursor: pointer; }
+  .reacts .tray button:hover, .reacts .tray button.mine { background: #f6e3e0; }
+  .reacts .pop { animation: pop .3s ease; }
+  @keyframes pop { 50% { transform: scale(1.3); } }
   .letters .empty { margin: 0; text-align: center; font: 16px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; color: #555; }
   @media (max-width: 600px) {
     .letters { width: 100vw; padding: 16px 10px 100px; }
     .lined { font-size: 21px; padding: 14px 16px 20px; }
     .mail .head { padding: 10px 16px 0; }
+    .reacts { padding: 4px 16px 14px; }
+    .reacts .tray { grid-template-columns: repeat(4, 44px); }
+    .reacts .tray button { width: 44px; height: 44px; }
   }
 
   @media (prefers-reduced-motion: reduce) {
     .letter #img, .side figure, .bot { transition: none; }
     .shake { animation: none; }
+    .reacts .pop { animation: none; }
     .effect { display: none; }
   }
 </style>
@@ -583,6 +634,7 @@
   <div class="stickers" id="stickers" aria-hidden="true"></div>
 </div>
 <section class="letters" id="letters" aria-label="Our letters" hidden>
+  <div class="reacts first" id="first-reacts"></div>
   <div id="letters-list" aria-live="polite"></div>
   <button class="write" id="letters-write" type="button">नयाँ चिठी लेख</button>
   <form class="letter-form" id="letter-form" hidden>
@@ -959,13 +1011,67 @@
       }).catch(() => { img.alt = "This photo could not load."; });
       card.append(img);
     }
+    card.append(reactBar(l.id));
     return card;
   }
+
+  // ---- reactions -------------------------------------------------------------
+
+  // the same list the server allows (REACTIONS in customize.mjs)
+  const EMOJI = ["❤️", "🥰", "😍", "😘", "🫂", "😭", "😂", "🤍", "🌸", "✨", "🙏", "😤", "🥺", "💌", "🫶"];
+  let reactions = {};  // letter id or "first" -> { emoji: [names] }
+
+  function reactBar(id) {
+    const bar = el("div", { className: "reacts" });
+    drawReacts(bar, id);
+    return bar;
+  }
+
+  async function react(bar, id, emoji) {
+    try {
+      const { reactions: now } = await api("/reactions", { letter: id, emoji });
+      reactions[id] = now;
+      drawReacts(bar, id, emoji);
+    } catch (e) {
+      bar.append(el("span", { textContent: e.message }));
+    }
+  }
+
+  function drawReacts(bar, id, popped) {
+    const mine = reactions[id] ?? {};
+    const chips = Object.entries(mine).map(([emoji, names]) => {
+      const who = names.length > 1 ? "both of us" : names[0];
+      const chip = el("button", { type: "button", className: "chip" + (names.includes(me) ? " mine" : ""), title: names.join(" & "), ariaLabel: `${emoji} from ${who}` }, [el("b", { textContent: emoji }), who]);
+      if (emoji === popped) chip.classList.add("pop");
+      chip.addEventListener("click", () => react(bar, id, emoji));
+      return chip;
+    });
+    const tray = el("div", { className: "tray", hidden: true }, EMOJI.map(emoji => {
+      const b = el("button", { type: "button", textContent: emoji, className: mine[emoji]?.includes(me) ? "mine" : "" });
+      b.addEventListener("click", () => { tray.hidden = true; react(bar, id, emoji); });
+      return b;
+    }));
+    const add = el("button", { type: "button", className: "add", ariaLabel: "React", ariaExpanded: "false", innerHTML: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M8.5 14.5a4.5 4.5 0 0 0 7 0M9 9.5h.01M15 9.5h.01"/></svg>` });
+    if (!chips.length) add.append("react");
+    add.addEventListener("click", e => {
+      e.stopPropagation();
+      document.querySelectorAll(".reacts .tray").forEach(t => { if (t !== tray) t.hidden = true; });
+      tray.hidden = !tray.hidden;
+      add.ariaExpanded = String(!tray.hidden);
+    });
+    bar.replaceChildren(...chips, add, tray);
+  }
+  // a click anywhere else, or Escape, closes the emoji tray
+  const closeTrays = () => document.querySelectorAll(".reacts .tray").forEach(t => { t.hidden = true; });
+  document.addEventListener("click", e => { if (!e.target.closest(".reacts .tray")) closeTrays(); });
+  document.addEventListener("keydown", e => { if (e.key === "Escape") closeTrays(); });
 
   async function loadLetters() {
     const list = $("letters-list");
     try {
-      const { letters } = await api("/letters");
+      const { letters, reactions: saved } = await api("/letters");
+      reactions = saved ?? {};
+      drawReacts($("first-reacts"), "first");
       // the server keeps them newest first; on the page they follow the first letter in order
       list.replaceChildren(...letters.reverse().map(mail));
       $("letters").hidden = false;
@@ -976,7 +1082,7 @@
 
   // Pick up letters the other one has written without a reload
   function refresh() {
-    if (document.hidden || $("letters").hidden) return;
+    if (document.hidden || $("letters").hidden || document.querySelector(".reacts .tray:not([hidden])")) return;
     loadLetters();
   }
   setInterval(refresh, 60000);

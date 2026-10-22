@@ -2,7 +2,8 @@
 //   GET  /api/settings        -> current settings, and who is asking
 //   POST /api/chat {message, history} -> asks Claude, saves the result, returns {reply, settings}
 //   POST /api/undo, /api/reset
-//   GET  /api/letters         -> the letters we have written each other, newest first
+//   GET  /api/letters         -> the letters we have written each other, newest first, and the reactions on them
+//   POST /api/reactions {letter, emoji} -> adds or takes back the asker's reaction ("first" is the first letter)
 //   POST /api/letters {text, photo} -> adds a letter (photo is a base64 JPEG)
 //   GET  /api/letters/<id>/photo    -> that letter's photo
 //   POST /api/letters/<id>/delete   -> removes a letter, only by the one who wrote it
@@ -110,6 +111,21 @@ async function addPicture(store, by, { photo, thumb, caption, taken }) {
   await store.set(`picture-thumb-${picture.id}`, small);
   await store.setJSON("pictures", [picture, ...await picturesIn(store)].sort(newestFirst));
   return picture;
+}
+
+// Reactions: { letter id or "first": { emoji: [names] } }. Only emoji from this list.
+const REACTIONS = ["❤️", "🥰", "😍", "😘", "🫂", "😭", "😂", "🤍", "🌸", "✨", "🙏", "😤", "🥺", "💌", "🫶"];
+const reactionsIn = async store => (await store.get("reactions", { type: "json" })) ?? {};
+
+async function toggleReaction(store, me, letter, emoji) {
+  const all = await reactionsIn(store);
+  const names = all[letter]?.[emoji] ?? [];
+  const next = names.includes(me) ? names.filter(n => n !== me) : [...names, me];
+  all[letter] = { ...all[letter], [emoji]: next };
+  if (!next.length) delete all[letter][emoji];
+  if (!Object.keys(all[letter]).length) delete all[letter];
+  await store.setJSON("reactions", all);
+  return all[letter] ?? {};
 }
 
 // Movies: one list. The first time it is read it starts with what we had already
@@ -221,7 +237,10 @@ export default async (req) => {
       try { return send({ results: await searchMovies(new URL(req.url).searchParams.get("q") ?? "") }); }
       catch { return send({ error: "The movie search isn't answering. You can still add it by name." }, 502); }
     }
-    if (req.method === "GET" && route === "letters") return send({ letters: await lettersIn(store) });
+    if (req.method === "GET" && route === "letters") {
+      const [letters, reactions] = await Promise.all([lettersIn(store), reactionsIn(store)]);
+      return send({ letters, reactions });
+    }
     if (req.method === "GET" && letterAction === "photo") {
       const bytes = await store.get(`photo-${letterId}`, { type: "arrayBuffer" });
       if (!bytes) return send({ error: "not found" }, 404);
@@ -235,6 +254,12 @@ export default async (req) => {
     }
     if (req.method !== "POST") return send({ error: "not found" }, 404);
 
+    if (route === "reactions") {
+      const { letter, emoji } = await req.json();
+      if (!REACTIONS.includes(emoji)) return send({ error: "That one isn't on the list." }, 400);
+      if (letter !== "first" && !(await lettersIn(store)).some(l => l.id === letter)) return send({ error: "That letter is gone." }, 404);
+      return send({ reactions: await toggleReaction(store, me, letter, emoji) });
+    }
     if (route === "pictures") {
       const picture = await addPicture(store, me, await req.json());
       if (!picture) return send({ error: "That picture didn't come through. Try it again." }, 400);
@@ -290,6 +315,8 @@ export default async (req) => {
       if (letter.from !== me) return send({ error: "Only the one who wrote it can remove it." }, 403);
       await store.setJSON("letters", letters.filter(l => l.id !== letterId));
       if (letter.photo) await store.delete(`photo-${letterId}`);
+      const reactions = await reactionsIn(store);
+      if (reactions[letterId]) { delete reactions[letterId]; await store.setJSON("reactions", reactions); }
       return send({ ok: true });
     }
 
