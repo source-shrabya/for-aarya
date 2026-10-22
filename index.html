@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
 <title>प्रिय आर्या</title>
+<link rel="icon" type="image/png" sizes="32x32" href="icon-32.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Kalam:wght@300;400&display=swap" rel="stylesheet">
@@ -427,14 +429,31 @@
 
   /* Letters we write each other, one after another under the first one */
   .letters {
-    width: min(var(--letter-w), 94vw);
-    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 1fr min(var(--letter-w), 94vw) 1fr;
+  }
+  .letters .main {
+    grid-column: 2;
+    grid-row: 1;
+    min-width: 0;
     padding: 24px 0 120px;
     display: flex;
     flex-direction: column;
     gap: 48px;
   }
   .letters[hidden] { display: none; }
+  /* Movie pictures beside the letters. They never make the page longer:
+     the column is as tall as the letters and the rest is cut off. */
+  .letters .side { grid-row: 1; contain: size; overflow-x: visible; overflow-y: clip; padding-top: 40px; }
+  .letters .side.left { grid-column: 1; }
+  .letters .side.right { grid-column: 3; }
+  .letters .side figure { opacity: 1; }
+  .letters .side img { aspect-ratio: var(--ratio); }
+  @media (max-width: 1100px) {
+    .letters { grid-template-columns: 1fr; justify-items: center; }
+    .letters .main { grid-column: 1; width: min(var(--letter-w), 94vw); }
+    .letters .side { display: none; }
+  }
   .letters #letters-list { display: flex; flex-direction: column; gap: 48px; }
   .letters .write, .letters .send {
     align-self: center;
@@ -581,7 +600,7 @@
   @keyframes pop { 50% { transform: scale(1.3); } }
   .letters .empty { margin: 0; text-align: center; font: 16px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; color: #555; }
   @media (max-width: 600px) {
-    .letters { width: 100vw; padding: 16px 10px 100px; }
+    .letters .main { width: 100vw; padding: 16px 10px 100px; }
     .lined { font-size: 21px; padding: 14px 16px 20px; }
     .mail .head { padding: 10px 16px 0; }
     .reacts { padding: 4px 16px 14px; }
@@ -633,7 +652,9 @@
   <div class="notes bottom" id="notes-bottom"></div>
   <div class="stickers" id="stickers" aria-hidden="true"></div>
 </div>
-<section class="letters" id="letters" aria-label="Our letters" hidden>
+<section class="letters" id="letters" aria-label="Our letters" data-pics="polaroid" hidden>
+  <aside class="side left" id="more-left" aria-hidden="true"></aside>
+  <div class="main" id="letters-main">
   <div class="reacts first" id="first-reacts"></div>
   <div id="letters-list" aria-live="polite"></div>
   <button class="write" id="letters-write" type="button">नयाँ चिठी लेख</button>
@@ -656,6 +677,8 @@
       <button class="plain" id="letter-cancel" type="button">Cancel</button>
     </div>
   </form>
+  </div>
+  <aside class="side right" id="more-right" aria-hidden="true"></aside>
 </section>
 <div class="effect" id="effect" aria-hidden="true"></div>
 
@@ -857,6 +880,7 @@
 
     const wrap = $("letter");
     wrap.dataset.pics = s.pictures.style;
+    $("letters").dataset.pics = s.pictures.style;
     for (const side of ["left", "right"]) {
       const notes = s.notes.filter(n => n.place === side).map(note);
       const offset = side === "right" ? 6 : 0;
@@ -1065,6 +1089,75 @@
   const closeTrays = () => document.querySelectorAll(".reacts .tray").forEach(t => { t.hidden = true; });
   document.addEventListener("click", e => { if (!e.target.closest(".reacts .tray")) closeTrays(); });
   document.addEventListener("keydown", e => { if (e.key === "Escape") closeTrays(); });
+
+  // Pictures from the movies we've watched, down both sides of the letters.
+  // When the letters get longer than the pictures, they start again from the top.
+  const MOVIE_PICS = [
+    {"src": "art/movies/tangled-05.jpg", "caption": "the lanterns", "w": 400, "h": 600},
+    {"src": "art/movies/twilight-01.jpg", "caption": "the meadow", "w": 394, "h": 700},
+    {"src": "art/movies/narnia-04.jpg", "caption": "through the wardrobe", "w": 400, "h": 415},
+    {"src": "art/movies/maninlove-02.jpg", "caption": "taking care", "w": 400, "h": 225},
+    {"src": "art/movies/tangled-06.jpg", "caption": "out on the lake", "w": 400, "h": 533},
+    {"src": "art/movies/twilight-06.jpg", "caption": "you & me", "w": 400, "h": 533},
+    {"src": "art/movies/narnia-05.jpg", "caption": "he's coming", "w": 400, "h": 533},
+    {"src": "art/movies/maninlove-03.jpg", "caption": "the first hello", "w": 400, "h": 268},
+    {"src": "art/movies/tangled-07.jpg", "caption": "from the window", "w": 395, "h": 700},
+    {"src": "art/movies/twilight-08.jpg", "caption": "flowers everywhere", "w": 394, "h": 700},
+    {"src": "art/movies/narnia-08.jpg", "caption": "lucy & the lamppost", "w": 400, "h": 502},
+    {"src": "art/movies/maninlove-05.jpg", "caption": "walking together", "w": 400, "h": 666},
+    {"src": "art/movies/tangled-12.jpg", "caption": "the golden flower", "w": 394, "h": 700},
+    {"src": "art/movies/twilight-09.jpg", "caption": "a quiet hill", "w": 394, "h": 700},
+    {"src": "art/movies/narnia-11.jpg", "caption": "an umbrella in the snow", "w": 400, "h": 600},
+    {"src": "art/movies/maninlove-08.jpg", "caption": "a piggyback ride", "w": 400, "h": 571},
+    {"src": "art/movies/tangled-13.jpg", "caption": "pascal", "w": 394, "h": 700},
+    {"src": "art/movies/twilight-10.jpg", "caption": "that smile", "w": 400, "h": 400},
+    {"src": "art/movies/narnia-13.jpg", "caption": "four at the lamppost", "w": 400, "h": 499},
+    {"src": "art/movies/maninlove-09.jpg", "caption": "popsicles", "w": 400, "h": 615},
+    {"src": "art/movies/tangled-16.jpg", "caption": "let down your hair", "w": 394, "h": 700},
+    {"src": "art/movies/twilight-21.jpg", "caption": "in the meadow", "w": 400, "h": 491},
+    {"src": "art/movies/narnia-15.jpg", "caption": "the door to winter", "w": 400, "h": 564},
+    {"src": "art/movies/maninlove-11.jpg", "caption": "the view", "w": 400, "h": 166},
+    {"src": "art/movies/tangled-21.jpg", "caption": "the tower window", "w": 400, "h": 565},
+    {"src": "art/movies/twilight-22.jpg", "caption": "sitting close", "w": 400, "h": 400},
+    {"src": "art/movies/narnia-16.jpg", "caption": "a nap with aslan", "w": 400, "h": 500},
+    {"src": "art/movies/maninlove-13.jpg", "caption": "a sunset hug", "w": 400, "h": 261},
+    {"src": "art/movies/tangled-22.jpg", "caption": "the night of lights", "w": 394, "h": 700},
+    {"src": "art/movies/twilight-23.jpg", "caption": "purple flowers", "w": 394, "h": 700},
+    {"src": "art/movies/narnia-23.jpg", "caption": "a walk in the snow", "w": 400, "h": 426},
+    {"src": "art/movies/maninlove-14.jpg", "caption": "i love you too", "w": 400, "h": 400},
+    {"src": "art/movies/tangled-23.jpg", "caption": "a kiss", "w": 394, "h": 700},
+    {"src": "art/movies/twilight-24.jpg", "caption": "holding on", "w": 400, "h": 400},
+    {"src": "art/movies/narnia-24.jpg", "caption": "waiting in the snow", "w": 394, "h": 700},
+    {"src": "art/movies/tangled-26.jpg", "caption": "in the boat", "w": 394, "h": 700},
+    {"src": "art/movies/twilight-25.jpg", "caption": "head to head", "w": 394, "h": 700},
+    {"src": "art/movies/narnia-27.jpg", "caption": "the way home", "w": 394, "h": 700},
+    {"src": "art/movies/tangled-28.jpg", "caption": "hold me", "w": 400, "h": 567},
+    {"src": "art/movies/twilight-27.jpg", "caption": "lying in the grass", "w": 400, "h": 259},
+    {"src": "art/movies/tangled-30.jpg", "caption": "a sky full of lights", "w": 356, "h": 700},
+    {"src": "art/movies/twilight-28.jpg", "caption": "a rainy day in", "w": 394, "h": 700},
+    {"src": "art/movies/tangled-31.jpg", "caption": "just us two", "w": 400, "h": 500},
+    {"src": "art/movies/twilight-29.jpg", "caption": "our spot", "w": 400, "h": 250},
+    {"src": "art/movies/tangled-32.jpg", "caption": "dancing in the square", "w": 400, "h": 400},
+    {"src": "art/movies/twilight-31.jpg", "caption": "in the forest", "w": 394, "h": 700},
+    {"src": "art/movies/tangled-33.jpg", "caption": "forehead to forehead", "w": 394, "h": 700},
+    {"src": "art/movies/twilight-32.jpg", "caption": "under the lights", "w": 392, "h": 700},
+    {"src": "art/movies/tangled-34.jpg", "caption": "little us", "w": 394, "h": 700},
+    {"src": "art/movies/tangled-35.jpg", "caption": "the little boat", "w": 400, "h": 400},
+  ];
+  let moviePicsShown = 0;
+  function fillMoviePics() {
+    const left = $("more-left"), right = $("more-right");
+    // hidden, or on a narrow screen where the sides are off
+    if (!left.clientHeight) return;
+    for (let rounds = 0; rounds < 200 && (left.scrollHeight <= left.clientHeight || right.scrollHeight <= right.clientHeight); rounds++) {
+      const pic = MOVIE_PICS[moviePicsShown % MOVIE_PICS.length];
+      const f = figure(pic, moviePicsShown + 3);
+      f.querySelector("img").style.setProperty("--ratio", `${pic.w} / ${pic.h}`);
+      (moviePicsShown % 2 ? right : left).append(f);
+      moviePicsShown++;
+    }
+  }
+  new ResizeObserver(fillMoviePics).observe($("letters-main"));
 
   async function loadLetters() {
     const list = $("letters-list");
