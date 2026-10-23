@@ -9,7 +9,7 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png?v=2">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Tiro+Devanagari+Hindi:ital@0;1&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Homemade+Apple&family=Tiro+Devanagari+Hindi:ital@0;1&display=swap" rel="stylesheet">
 <style>
   /* Colours sampled from the photo of the letter. The bot can change the --paper, --rule-hex,
      --margin-hex, --note-* and --letter-* values; everything else stays as it is. */
@@ -22,7 +22,7 @@
     --ink: #1d2a50;
     --ink-soft: #3a4670;
     --note-ink: #1d2a50;
-    --note-font: "Tiro Devanagari Hindi";
+    --note-font: "Homemade Apple";
     --letter-w: 880px;
     --tilt: 0deg;
     --gap: 44px;        /* distance between ruled lines */
@@ -64,7 +64,7 @@
     margin: 0;
     min-height: 100dvh;
     color: var(--ink);
-    font-family: "Tiro Devanagari Hindi", serif;
+    font-family: "Homemade Apple", "Tiro Devanagari Hindi", serif;
     font-weight: 300;
     font-size: 26px;
     line-height: var(--gap);
@@ -304,7 +304,7 @@
     border-radius: 999px;
     background: #8c2f3b;
     color: #f6efe2;
-    font: 400 20px/1 "Tiro Devanagari Hindi", serif;
+    font: 400 20px/1 "Homemade Apple", "Tiro Devanagari Hindi", serif;
     text-decoration: none;
     box-shadow: 0 4px 14px rgba(140, 47, 59, .35);
   }
@@ -327,7 +327,7 @@
     border-radius: 999px;
     background: var(--ink);
     color: #f6efe2;
-    font: 400 20px/1 "Tiro Devanagari Hindi", serif;
+    font: 400 20px/1 "Homemade Apple", "Tiro Devanagari Hindi", serif;
     box-shadow: 0 4px 14px rgba(29, 42, 80, .35);
     cursor: pointer;
   }
@@ -358,7 +358,7 @@
     padding: 14px 16px;
     border-bottom: 1px solid rgba(0, 0, 0, .1);
   }
-  .bot h2 { margin: 0; font: 400 22px/1.2 "Tiro Devanagari Hindi", serif; color: var(--ink); }
+  .bot h2 { margin: 0; font: 400 22px/1.2 "Homemade Apple", "Tiro Devanagari Hindi", serif; color: var(--ink); }
   .bot .x { border: 0; background: none; font-size: 26px; line-height: 1; cursor: pointer; color: #555; padding: 4px 8px; }
   .bot .log { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
   .bot .msg { max-width: 85%; padding: 8px 12px; border-radius: 14px; white-space: pre-wrap; overflow-wrap: anywhere; }
@@ -462,7 +462,7 @@
     padding: 10px 22px;
     background: #8c2f3b;
     color: #f6efe2;
-    font: 400 22px/1.2 "Tiro Devanagari Hindi", serif;
+    font: 400 22px/1.2 "Homemade Apple", "Tiro Devanagari Hindi", serif;
     box-shadow: 0 4px 14px rgba(140, 47, 59, .3);
     cursor: pointer;
   }
@@ -522,12 +522,12 @@
   }
   .photo-drop.over .frame { border-color: #8c2f3b; background: #f6e3e0; }
   .photo-drop .frame svg { width: 46px; height: 46px; color: #8c2f3b; transform: rotate(-8deg); }
-  .photo-drop .frame b { font: 400 21px/1.2 "Tiro Devanagari Hindi", serif; }
+  .photo-drop .frame b { font: 400 21px/1.2 "Homemade Apple", "Tiro Devanagari Hindi", serif; }
   .photo-drop .frame small { font-size: 14px; color: #666; }
   .photo-drop.has .frame { padding: 0; border: 0; background: #222; }
   .photo-drop.has .frame > :not(img) { display: none; }
   .photo-drop img { width: 100%; height: 100%; object-fit: cover; }
-  .photo-drop .caption { display: block; text-align: center; font: 400 19px/46px "Tiro Devanagari Hindi", serif; color: #333; }
+  .photo-drop .caption { display: block; text-align: center; font: 400 19px/46px "Homemade Apple", "Tiro Devanagari Hindi", serif; color: #333; }
   .letter-form .photo-off { align-self: center; }
   .letter-form .error { margin: 0; color: #7a1f1f; min-height: 1.45em; }
   /* A sheet of lined paper for typed letters */
@@ -818,7 +818,7 @@
     ladybugs: { chars: ["🐞"], colors: [""] },
     stars: { chars: ["★", "☆"], colors: ["#e8b923", "#f5d76e"] },
   };
-  const loadedFonts = new Set(["Tiro Devanagari Hindi"]);
+  const loadedFonts = new Set(["Homemade Apple", "Tiro Devanagari Hindi"]);
   let lastEffect = null;
 
   function el(tag, props = {}, kids = []) {
