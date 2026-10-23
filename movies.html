@@ -280,6 +280,11 @@
   @media (prefers-reduced-motion: reduce) {
     .tickets .tearing .stub { animation: none; opacity: 0; }
   }
+  /* Hold a card and drag it to change the order; the order is saved for both of us */
+  .hint { margin: -10px 0 18px; font-size: 15px; line-height: 1.4; color: var(--ink-soft); font-weight: 300; }
+  [data-id] { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+  .sortable-ghost { opacity: .35; }
+  .sortable-drag { cursor: grabbing; }
 </style>
 </head>
 <body>
@@ -310,10 +315,12 @@
 
   <section class="shelf">
     <h2>हेर्न बाँकी <span id="bucket-count"></span></h2>
+    <p class="hint">Hold one and drag it to move it.</p>
     <ul class="tickets" id="movies-bucket"></ul>
   </section>
   <section class="shelf">
     <h2>हेरिसकेका <span id="watched-count"></span></h2>
+    <p class="hint">Hold one and drag it to move it.</p>
     <ul class="stubs" id="movies-watched"></ul>
   </section>
 </main>
@@ -321,6 +328,7 @@
 <p class="toast" id="toast" role="status" hidden></p>
 <a class="back" href="./">← चिठी</a>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js"></script>
 <script>
   const API = "https://for-aarya-bot.netlify.app/api";
   const $ = id => document.getElementById(id);
@@ -378,6 +386,7 @@
 
   function ticket(m) {
     const li = el("li");
+    li.dataset.id = m.id;
     const seen = el("button", { type: "button", className: "pill red", textContent: "✓ we watched it" });
     const meta = [m.year, `added by ${m.by}`].filter(Boolean).join(", ");
     const t = el("div", { className: "ticket" }, [el("div", { className: "paper" }, [
@@ -410,6 +419,7 @@
 
   function stub(m) {
     const li = el("li");
+    li.dataset.id = m.id;
     li.append(
       el("div", { className: "shadow" }, [el("div", { className: "card" }, [
         poster(m, 300),
@@ -428,14 +438,36 @@
     $("watched-count").textContent = n("movies-watched") ? `(${n("movies-watched")})` : "";
   }
 
+
+  // Hold a card (or press and drag with a mouse) to move it; the new order is saved for both of us.
+  // On a phone the hold keeps an ordinary swipe scrolling the page.
+  let dragging = false;
+  function draggable(list, kind, moved) {
+    if (!window.Sortable) return;
+    Sortable.create(list, {
+      draggable: "li[data-id]",
+      animation: 180,
+      delay: 250,
+      delayOnTouchOnly: true,
+      touchStartThreshold: 6,
+      onStart: () => { dragging = true; },
+      onEnd: async e => {
+        dragging = false;
+        if (e.oldIndex === e.newIndex) return;
+        const ids = [...list.children].map(li => li.dataset.id).filter(Boolean);
+        try { await api(`/${kind}/order`, { ids }); moved?.(ids); }
+        catch (err) { toast(err.message); loadMovies(); }
+      },
+    });
+  }
+
   let onList = [];
   async function loadMovies() {
     try {
       const { movies } = await api("/movies");
       onList = movies;
       const bucket = movies.filter(m => m.list === "bucket").map(ticket);
-      // newest watched first
-      const watched = movies.filter(m => m.list === "watched").sort((a, b) => (b.watched ?? "").localeCompare(a.watched ?? "")).map(stub);
+      const watched = movies.filter(m => m.list === "watched").map(stub);
       $("movies-bucket").replaceChildren(...bucket);
       $("movies-watched").replaceChildren(...watched);
       if (!bucket.length) $("movies-bucket").append(el("li", { className: "empty", textContent: "Nothing to watch yet. Find one above." }));
@@ -527,8 +559,10 @@
   });
 
   // Pick up what the other one adds without a reload
-  setInterval(() => { if (!document.hidden && !$("movies").hidden && results.hidden) loadMovies(); }, 60000);
-  document.addEventListener("visibilitychange", () => { if (!document.hidden && !$("movies").hidden) loadMovies(); });
+  setInterval(() => { if (!document.hidden && !$("movies").hidden && results.hidden && !dragging) loadMovies(); }, 60000);
+  document.addEventListener("visibilitychange", () => { if (!document.hidden && !$("movies").hidden && !dragging) loadMovies(); });
+  draggable($("movies-bucket"), "movies");
+  draggable($("movies-watched"), "movies");
 
   if (password) loadMovies();
   else { $("lock").hidden = false; $("pw").focus(); }

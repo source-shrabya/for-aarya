@@ -277,6 +277,11 @@
     .disc { transition: none; }
     .playing .disc i { animation: none; }
   }
+  /* Hold a card and drag it to change the order; the order is saved for both of us */
+  .hint { margin: -10px 0 18px; font-size: 15px; line-height: 1.4; color: var(--ink-soft); font-weight: 300; }
+  [data-id] { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+  .sortable-ghost { opacity: .35; }
+  .sortable-drag { cursor: grabbing; }
 </style>
 </head>
 <body>
@@ -317,12 +322,14 @@
   </div>
 
   <h2 class="count">गीतहरू <span id="count"></span></h2>
+  <p class="hint">Hold one and drag it to move it.</p>
   <ul class="records" id="records"></ul>
 </main>
 
 <p class="toast" id="toast" role="status" hidden></p>
 <a class="back" href="./">← चिठी</a>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js"></script>
 <script>
   const API = "https://for-aarya-bot.netlify.app/api";
   const $ = id => document.getElementById(id);
@@ -446,6 +453,7 @@
 
   function record(s) {
     const li = el("li");
+    li.dataset.id = s.id;
     const card = el("div", { className: "record" });
     const actions = el("div", { className: "actions" }, [
       ...(s.preview ? [playButton(s, card)] : []),
@@ -471,6 +479,29 @@
     const by = name => onList.filter(s => s.by === name).length;
     $("count").textContent = onList.length ? `(${by("Aarya")} from Aarya, ${by("Shrabya")} from Shrabya)` : "";
     if (!onList.length) $("records").replaceChildren(el("li", { className: "empty", textContent: "No songs yet. Find one above and send it." }));
+  }
+
+
+  // Hold a card (or press and drag with a mouse) to move it; the new order is saved for both of us.
+  // On a phone the hold keeps an ordinary swipe scrolling the page.
+  let dragging = false;
+  function draggable(list, kind, moved) {
+    if (!window.Sortable) return;
+    Sortable.create(list, {
+      draggable: "li[data-id]",
+      animation: 180,
+      delay: 250,
+      delayOnTouchOnly: true,
+      touchStartThreshold: 6,
+      onStart: () => { dragging = true; },
+      onEnd: async e => {
+        dragging = false;
+        if (e.oldIndex === e.newIndex) return;
+        const ids = [...list.children].map(li => li.dataset.id).filter(Boolean);
+        try { await api(`/${kind}/order`, { ids }); moved?.(ids); }
+        catch (err) { toast(err.message); loadSongs(); }
+      },
+    });
   }
 
   let onList = [];
@@ -602,8 +633,9 @@
   });
 
   // Pick up what the other one sends without a reload
-  setInterval(() => { if (!document.hidden && !$("songs").hidden && results.hidden && $("compose").hidden) loadSongs(); }, 60000);
-  document.addEventListener("visibilitychange", () => { if (!document.hidden && !$("songs").hidden && $("compose").hidden) loadSongs(); });
+  setInterval(() => { if (!document.hidden && !$("songs").hidden && results.hidden && $("compose").hidden && !dragging) loadSongs(); }, 60000);
+  document.addEventListener("visibilitychange", () => { if (!document.hidden && !$("songs").hidden && $("compose").hidden && !dragging) loadSongs(); });
+  draggable($("records"), "songs", ids => { onList = ids.map(id => onList.find(s => s.id === id)).filter(Boolean); });
 
   if (password) loadSongs();
   else { $("lock").hidden = false; $("pw").focus(); }

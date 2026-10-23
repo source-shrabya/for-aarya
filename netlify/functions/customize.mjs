@@ -7,21 +7,22 @@
 //   POST /api/letters {text, photo} -> adds a letter (photo is a base64 JPEG)
 //   GET  /api/letters/<id>/photo    -> that letter's photo
 //   POST /api/letters/<id>/delete   -> removes a letter, only by the one who wrote it
-//   GET  /api/movies          -> our movie list: what we have watched and what we want to
+//   GET  /api/movies          -> our movie list: what we have watched and what we want to, in our order
 //   GET  /api/movies/search?q=      -> movies matching a name, with year and poster (from IMDb's search box)
 //   POST /api/movies {title, list, year, poster, imdb} -> adds a movie to "watched" or "bucket"
 //   POST /api/movies/<id>/watched   -> moves a bucket-list movie to watched
 //   POST /api/movies/<id>/delete    -> removes a movie
-//   GET  /api/pictures        -> our pictures, newest posted first
+//   GET  /api/pictures        -> our pictures, in our order (a new one goes on top)
 //   POST /api/pictures {photo, thumb, caption, taken} -> adds a picture (both base64 JPEGs)
 //   GET  /api/pictures/<id>/photo, /api/pictures/<id>/thumb -> the picture, or its small copy
 //   POST /api/pictures/<id>/delete  -> removes a picture, only by the one who added it
-//   GET  /api/songs           -> songs we have sent each other, newest first, and who is asking
+//   GET  /api/songs           -> songs we have sent each other, in our order, and who is asking
 //   GET  /api/songs/search?q=       -> songs matching a name, with artist, cover and a 30 second preview (from iTunes)
 //   GET  /api/songs/link?url=       -> the name and picture behind a YouTube or Spotify link
 //   POST /api/songs {title, artist, cover, preview, apple, link, note} -> sends a song
 //   POST /api/songs/<id>/love       -> adds or takes back the asker's heart
 //   POST /api/songs/<id>/delete     -> removes a song, only by the one who sent it
+//   POST /api/movies/order, /api/pictures/order, /api/songs/order {ids} -> saves the order we dragged them into
 import Anthropic from "@anthropic-ai/sdk";
 import { getStore } from "@netlify/blobs";
 import { createHash, timingSafeEqual } from "node:crypto";
@@ -101,7 +102,6 @@ const jpeg = (b64, max) => {
   return bytes.length <= max && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff ? bytes : null;
 };
 const dayOk = d => typeof d === "string" && /^\d{4}-\d{2}-\d{2}$/.test(d) && !Number.isNaN(Date.parse(d));
-const newestFirst = (a, b) => b.added.localeCompare(a.added);
 
 async function addPicture(store, by, { photo, thumb, caption, taken }) {
   const big = jpeg(photo, MAX_PHOTO), small = jpeg(thumb, MAX_THUMB);
@@ -116,7 +116,7 @@ async function addPicture(store, by, { photo, thumb, caption, taken }) {
   };
   await store.set(`picture-${picture.id}`, big);
   await store.set(`picture-thumb-${picture.id}`, small);
-  await store.setJSON("pictures", [picture, ...await picturesIn(store)].sort(newestFirst));
+  await store.setJSON("pictures", [picture, ...await picturesIn(store)]);
   return picture;
 }
 
@@ -186,7 +186,7 @@ async function searchMovies(q) {
 const posterOk = p => typeof p === "string" && /^https:\/\/m\.media-amazon\.com\/images\/[^\s"'<>()\\]+$/.test(p) && p.length < 400;
 const yearOk = y => Number.isInteger(y) && y > 1880 && y < 2100;
 
-// Songs: one list, newest first.
+// Songs: one list, newest first unless we have dragged them around.
 const songsIn = async store => (await store.get("songs", { type: "json" })) ?? [];
 
 // iTunes search needs no key and has most Nepali songs too
@@ -228,6 +228,17 @@ const COVER = /^https:\/\/(is\d+-ssl\.mzstatic\.com|i\.ytimg\.com|image-cdn-[a-z
 const PREVIEW = /^https:\/\/audio-ssl\.itunes\.apple\.com\//;
 const APPLE = /^https:\/\/music\.apple\.com\//;
 const text = (v, max) => (typeof v === "string" ? v.trim().slice(0, max) : "");
+
+// Puts the items named in ids into that order, in the places those items already hold.
+// Items not named keep their places, so the to-watch list can be reordered without touching
+// the watched one, and a song added while the other one was dragging is not lost.
+function reorder(items, ids) {
+  if (!Array.isArray(ids)) return null;
+  const byId = new Map(items.map(i => [i.id, i]));
+  const wanted = [...new Set(ids)].filter(id => byId.has(id));
+  const named = new Set(wanted);
+  return items.map(i => named.has(i.id) ? byId.get(wanted.shift()) : i);
+}
 
 async function addSong(store, by, body) {
   const song = { id: newId(), title: text(body.title, 150), artist: text(body.artist, 120), by, added: new Date().toISOString(), note: text(body.note, MAX_NOTE), loves: [] };
@@ -294,6 +305,7 @@ export default async (req) => {
   const [, movieId, movieAction] = route.match(/^movies\/([a-z0-9]+)\/(watched|delete)$/) ?? [];
   const [, pictureId, pictureAction] = route.match(/^pictures\/([a-z0-9]+)\/(photo|thumb|delete)$/) ?? [];
   const [, songId, songAction] = route.match(/^songs\/([a-z0-9]+)\/(love|delete)$/) ?? [];
+  const [, orderOf] = route.match(/^(movies|pictures|songs)\/order$/) ?? [];
 
   try {
     if (req.method === "GET" && route === "settings") return send({ settings: await load(store), me });
@@ -312,7 +324,7 @@ export default async (req) => {
       if (!bytes) return send({ error: "not found" }, 404);
       return new Response(bytes, { headers: { ...cors(origin), "Content-Type": "image/jpeg", "Cache-Control": "private, max-age=31536000" } });
     }
-    if (req.method === "GET" && route === "pictures") return send({ pictures: (await picturesIn(store)).sort(newestFirst) });
+    if (req.method === "GET" && route === "pictures") return send({ pictures: await picturesIn(store) });
     if (req.method === "GET" && (pictureAction === "photo" || pictureAction === "thumb")) {
       const bytes = await store.get(`picture-${pictureAction === "thumb" ? "thumb-" : ""}${pictureId}`, { type: "arrayBuffer" });
       if (!bytes) return send({ error: "not found" }, 404);
@@ -349,6 +361,14 @@ export default async (req) => {
       return send({ song });
     }
 
+    if (req.method === "POST" && orderOf) {
+      const listOf = { movies: moviesIn, pictures: picturesIn, songs: songsIn }[orderOf];
+      const { ids } = await req.json();
+      const next = reorder(await listOf(store), ids);
+      if (!next) return send({ error: "That order didn't come through. Try dragging it again." }, 400);
+      await store.setJSON(orderOf, next);
+      return send({ ok: true });
+    }
     if (route === "reactions") {
       const { letter, emoji } = await req.json();
       if (!REACTIONS.includes(emoji)) return send({ error: "That one isn't on the list." }, 400);
@@ -388,7 +408,7 @@ export default async (req) => {
       if (posterOk(poster)) movie.poster = poster;
       if (typeof imdb === "string" && /^tt\d{1,10}$/.test(imdb)) movie.imdb = imdb;
       if (movie.list === "watched") movie.watched = movie.added;
-      await store.setJSON("movies", [...movies, movie]);
+      await store.setJSON("movies", [movie, ...movies]);
       return send({ movie });
     }
     if (movieAction) {
@@ -399,8 +419,9 @@ export default async (req) => {
         await store.setJSON("movies", movies.filter(m => m.id !== movieId));
         return send({ ok: true });
       }
+      // a movie we just watched goes to the top of the watched side
       Object.assign(movie, { list: "watched", watched: new Date().toISOString() });
-      await store.setJSON("movies", movies);
+      await store.setJSON("movies", [movie, ...movies.filter(m => m.id !== movieId)]);
       return send({ movie });
     }
     if (letterAction === "delete") {

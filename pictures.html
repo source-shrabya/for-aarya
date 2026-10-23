@@ -12,7 +12,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;1,400;1,500&family=Tiro+Devanagari+Hindi:ital@0;1&display=swap" rel="stylesheet">
 <style>
   /* The same notebook paper as the letter page. Our pictures are polaroids taped to it,
-     grouped by the month they were posted, newest first. */
+     newest on top, in whatever order we drag them into. */
   :root {
     --paper: #c3b9a7;
     --rule: color-mix(in srgb, #5c6876 55%, transparent);
@@ -168,10 +168,9 @@
   .tray .state.bad { color: var(--stamp); }
   .tray .buttons { display: flex; align-items: center; justify-content: center; gap: 22px; margin-top: 30px; }
 
-  /* The wall, one shelf per month */
-  .month { margin-top: 64px; }
-  .month h2 { margin: 0 0 24px; font-size: 34px; line-height: 1.2; font-weight: 400; }
-  .month h2 span { font-size: 18px; color: var(--ink-soft); font-weight: 300; }
+  /* The wall */
+  #months { margin-top: 64px; }
+  #months .hint { margin: 0 0 24px; }
   .wall { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr)); gap: 40px 28px; margin: 0; padding: 0; list-style: none; }
   .wall li:nth-child(5n+1) { --tilt: -2.2deg; --tape: 4deg; }
   .wall li:nth-child(5n+2) { --tilt: 1.6deg; --tape: -3deg; }
@@ -273,6 +272,11 @@
   @media (prefers-reduced-motion: reduce) {
     .drop, .wall button { transition: none; }
   }
+  /* Hold a card and drag it to change the order; the order is saved for both of us */
+  .hint { margin: -10px 0 18px; font-size: 15px; line-height: 1.4; color: var(--ink-soft); font-weight: 300; }
+  [data-id] { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+  .sortable-ghost { opacity: .35; }
+  .sortable-drag { cursor: grabbing; }
 </style>
 </head>
 <body>
@@ -329,6 +333,7 @@
 <p class="toast" id="toast" role="status" hidden></p>
 <a class="back" href="./">← चिठी</a>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js"></script>
 <script>
   const API = "https://for-aarya-bot.netlify.app/api";
   const $ = id => document.getElementById(id);
@@ -399,21 +404,43 @@
       el("span", { className: "words" }, [p.caption, el("small", { textContent: day(p.taken) })]),
     ]);
     button.addEventListener("click", () => show(index));
-    return el("li", {}, [button]);
+    const li = el("li", {}, [button]);
+    li.dataset.id = p.id;
+    return li;
+  }
+
+
+  // Hold a card (or press and drag with a mouse) to move it; the new order is saved for both of us.
+  // On a phone the hold keeps an ordinary swipe scrolling the page.
+  let dragging = false;
+  function draggable(list, kind, moved) {
+    if (!window.Sortable) return;
+    Sortable.create(list, {
+      draggable: "li[data-id]",
+      animation: 180,
+      delay: 250,
+      delayOnTouchOnly: true,
+      touchStartThreshold: 6,
+      onStart: () => { dragging = true; },
+      onEnd: async e => {
+        dragging = false;
+        if (e.oldIndex === e.newIndex) return;
+        const ids = [...list.children].map(li => li.dataset.id).filter(Boolean);
+        try { await api(`/${kind}/order`, { ids }); moved?.(ids); }
+        catch (err) { toast(err.message); loadPictures(); }
+      },
+    });
   }
 
   function drawWall() {
-    const months = [];
-    pictures.forEach((p, i) => {
-      const name = new Date(p.added).toLocaleDateString("en-GB", { month: "long", year: "numeric" });
-      if (months.at(-1)?.name !== name) months.push({ name, items: [] });
-      months.at(-1).items.push(polaroid(p, i));
-    });
-    $("months").replaceChildren(...months.map(m => el("section", { className: "month" }, [
-      el("h2", {}, [m.name + " ", el("span", { textContent: `(${m.items.length})` })]),
-      el("ul", { className: "wall" }, m.items),
-    ])));
-    if (!pictures.length) $("months").append(el("p", { className: "empty", textContent: "No pictures yet. Stick the first one on." }));
+    if (!pictures.length) {
+      $("months").replaceChildren(el("p", { className: "empty", textContent: "No pictures yet. Stick the first one on." }));
+      return;
+    }
+    const wall = el("ul", { className: "wall" }, pictures.map(polaroid));
+    $("months").replaceChildren(el("p", { className: "hint", textContent: "Hold one and drag it to move it." }), wall);
+    // the big view's next and previous follow the new order
+    draggable(wall, "pictures", ids => { pictures = ids.map(id => pictures.find(p => p.id === id)).filter(Boolean); drawWall(); });
   }
 
   async function loadPictures() {
@@ -623,7 +650,7 @@
   });
 
   // Pick up what the other one adds without a reload
-  const refresh = () => { if (!document.hidden && !$("album").hidden && !viewer.open) loadPictures(); };
+  const refresh = () => { if (!document.hidden && !$("album").hidden && !viewer.open && !dragging) loadPictures(); };
   setInterval(refresh, 60000);
   document.addEventListener("visibilitychange", refresh);
 
