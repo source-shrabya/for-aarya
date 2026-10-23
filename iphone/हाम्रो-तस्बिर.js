@@ -1,3 +1,6 @@
+// Variables used by Scriptable.
+// These must be at the very top of the file. Do not edit.
+// icon-color: pink; icon-glyph: heart;
 // हाम्रो तस्बिर: the iPhone home screen widget, for the free Scriptable app.
 // Like the Android one: the newest picture the other one posted on our picture wall, with its caption.
 // Run it once inside Scriptable to type the password; it is kept in the iPhone's Keychain.
