@@ -12,7 +12,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;1,400;1,500&family=Tiro+Devanagari+Hindi:ital@0;1&display=swap" rel="stylesheet">
 <style>
   /* The same notebook paper as the letter page. Movies to watch are whole cinema tickets;
-     once we watch one it is torn, and the stub goes on the watched side with a date stamp. */
+     once we watch one it is torn, and the stub goes on the watched side with a stamp. */
   :root {
     --paper: #c3b9a7;
     --rule: color-mix(in srgb, #5c6876 55%, transparent);
@@ -213,7 +213,7 @@
     100% { transform: translate(30px, 60px) rotate(24deg); opacity: 0; }
   }
 
-  /* Watched: torn stubs with the date we saw it stamped on */
+  /* Watched: torn stubs, stamped */
   .stubs { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 30px 22px; margin: 0; padding: 0; list-style: none; }
   .stubs li { position: relative; transform: rotate(var(--tilt, 0deg)); }
   .stubs li:nth-child(3n+1) { --tilt: -2deg; }
@@ -370,8 +370,6 @@
     return el("img", { className: "poster", src: small(m.poster, width), alt: "", loading: "lazy", referrerPolicy: "no-referrer" });
   }
 
-  const shortDate = iso => new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
-
   // two clicks, so nothing goes from a slip
   function removeButton(m, item) {
     const b = el("button", { type: "button", className: "remove", textContent: "remove" });
@@ -426,7 +424,7 @@
         el("span", { className: "name", textContent: m.title }),
         el("span", { className: "meta", textContent: m.year ? String(m.year) : "" }),
       ])]),
-      el("span", { className: "stamp", innerHTML: m.watched ? `हेर्यौं<br>${shortDate(m.watched)}` : "हेर्यौं ✓" }),
+      el("span", { className: "stamp", textContent: "हेर्यौं ✓" }),
       removeButton(m, li),
     );
     return li;

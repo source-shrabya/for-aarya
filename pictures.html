@@ -153,7 +153,7 @@
   .drop .frame small { font-size: 15px; color: var(--ink-soft); }
   .drop .caption { display: block; text-align: center; font-size: 19px; line-height: 46px; color: #333; }
 
-  /* Pictures picked but not stuck on yet, each with its caption and date */
+  /* Pictures picked but not stuck on yet, each with its caption and day */
   .tray { margin: 48px 0 0; }
   .tray[hidden] { display: none; }
   .tray h2 { margin: 0 0 22px; font-size: 30px; line-height: 1.2; font-weight: 400; }
@@ -177,24 +177,43 @@
   .wall li:nth-child(5n+3) { --tilt: -.6deg; --tape: 2deg; }
   .wall li:nth-child(5n+4) { --tilt: 2.4deg; --tape: -5deg; }
   .wall li:nth-child(5n+5) { --tilt: -1.4deg; --tape: 1deg; }
-  .wall button {
+  .wall .card {
     position: relative;
+    background: var(--polaroid);
+    box-shadow: 0 2px 4px rgba(40, 30, 20, .22), 0 6px 14px rgba(40, 30, 20, .14);
+    transform: rotate(var(--tilt));
+    transition: transform .2s ease, box-shadow .2s ease;
+  }
+  .wall .card:hover { transform: rotate(0deg) scale(1.04); box-shadow: 0 4px 8px rgba(40, 30, 20, .22), 0 14px 28px rgba(40, 30, 20, .2); z-index: 2; }
+  .wall .open {
     display: flex;
     flex-direction: column;
     width: 100%;
     padding: 10px 10px 0;
     border: 0;
-    background: var(--polaroid);
-    box-shadow: 0 2px 4px rgba(40, 30, 20, .22), 0 6px 14px rgba(40, 30, 20, .14);
-    transform: rotate(var(--tilt));
-    transition: transform .2s ease, box-shadow .2s ease;
+    background: none;
     text-align: center;
     cursor: zoom-in;
   }
-  .wall button:hover { transform: rotate(0deg) scale(1.04); box-shadow: 0 4px 8px rgba(40, 30, 20, .22), 0 14px 28px rgba(40, 30, 20, .2); z-index: 2; }
   .wall .shot { display: block; width: 100%; aspect-ratio: 1; object-fit: cover; background: #d9d2c4; }
-  .wall .words { display: block; min-height: 52px; padding: 8px 2px 10px; font-size: 18px; line-height: 1.25; color: #333; overflow-wrap: anywhere; }
-  .wall .words small { display: block; font-size: 14px; color: var(--ink-soft); }
+  .wall .words { display: block; padding: 8px 2px 0; font-size: 18px; line-height: 1.25; color: #333; overflow-wrap: anywhere; }
+  .wall .words:empty { display: none; }
+  /* under each picture, like Instagram: the day on the left, the comment bubble on the right */
+  .bar { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 4px 8px 8px 12px; font-size: 14px; color: var(--ink-soft); }
+  .bubble {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    min-height: 36px;
+    padding: 0 6px;
+    border: 0;
+    background: none;
+    color: var(--ink);
+    font-size: 15px;
+    cursor: pointer;
+  }
+  .bubble svg { width: 24px; height: 24px; }
+  .bubble:hover svg { color: var(--stamp); }
   .empty { margin-top: 56px; text-align: center; color: var(--ink-soft); font-weight: 300; }
 
   /* One picture, big */
@@ -210,21 +229,61 @@
     color: var(--ink);
   }
   .viewer::backdrop { background: rgba(20, 18, 28, .82); }
-  .viewer[open] { display: grid; place-items: center; }
+  .viewer[open] { display: grid; place-items: safe center; overflow-y: auto; }
   .viewer figure {
     position: relative;
     display: flex;
     flex-direction: column;
     max-width: calc(100vw - 32px);
-    margin: 0;
+    margin: 16px 0;
     padding: 14px 14px 0;
     background: var(--polaroid);
     box-shadow: 0 20px 60px rgba(0, 0, 0, .5);
   }
   .viewer img { display: block; max-width: calc(100vw - 60px); max-height: calc(100dvh - 190px); object-fit: contain; background: #222; }
-  .viewer figcaption { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 18px; padding: 10px 4px 12px; }
+  .viewer figcaption { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 2px 14px; padding: 6px 0 10px; }
   .viewer .text { flex: 1 1 260px; max-width: 60ch; font-size: 21px; line-height: 1.3; overflow-wrap: anywhere; }
   .viewer .meta { font-size: 15px; color: var(--ink-soft); }
+
+  .viewer .when { display: flex; align-items: center; gap: 8px; font-size: 15px; color: var(--ink-soft); }
+  /* the day is a date box that looks like plain text: tap it to pick another day */
+  .viewer .when input { border: 0; border-bottom: 1.5px dashed rgba(29, 42, 80, .35); background: transparent; color: var(--ink); font-size: 15px; padding: 2px 0; cursor: pointer; }
+  .viewer .all { width: 100%; text-align: left; font-size: 16px; }
+
+  /* Comments: a sheet that slides up from the bottom, the way Instagram does it */
+  .sheet {
+    width: min(100vw, 520px);
+    max-width: 100vw;
+    height: min(75dvh, 640px);
+    margin: auto auto 0;
+    padding: 0;
+    border: 0;
+    border-radius: 18px 18px 0 0;
+    background: var(--polaroid);
+    color: var(--ink);
+    box-shadow: 0 -10px 40px rgba(0, 0, 0, .3);
+  }
+  .sheet[open] { display: flex; flex-direction: column; animation: up .25s ease-out; }
+  .sheet::backdrop { background: rgba(20, 18, 28, .45); }
+  @keyframes up { from { transform: translateY(40%); opacity: 0; } }
+  .sheet header { position: relative; padding: 18px 16px 10px; border-bottom: 1px solid rgba(29, 42, 80, .12); text-align: center; font-weight: 500; }
+  .sheet header::before { content: ""; position: absolute; top: 7px; left: 50%; width: 40px; height: 4px; margin-left: -20px; border-radius: 2px; background: rgba(29, 42, 80, .25); }
+  .sheet .x { position: absolute; top: 8px; right: 8px; width: 40px; height: 40px; border: 0; background: none; font-size: 26px; line-height: 1; cursor: pointer; }
+  .sheet ul { flex: 1; margin: 0; padding: 8px 16px; overflow-y: auto; list-style: none; }
+  .sheet li { display: flex; gap: 12px; padding: 10px 0; }
+  .sheet .none { flex-direction: column; align-items: center; gap: 4px; padding-top: 48px; text-align: center; color: var(--ink-soft); }
+  .sheet .none b { font-size: 22px; font-weight: 500; color: var(--ink); }
+  .avatar { flex: none; display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; background: var(--ink); color: #fbf6ea; font-size: 16px; font-style: normal; }
+  .avatar.Aarya { background: var(--stamp); }
+  .sheet .said { flex: 1; min-width: 0; font-size: 17px; line-height: 1.35; overflow-wrap: anywhere; }
+  .sheet .said b { font-weight: 500; margin-right: 6px; }
+  .sheet .said small { display: flex; gap: 14px; margin-top: 2px; font-size: 13px; color: var(--ink-soft); }
+  .sheet .said .plain { font-size: 13px; padding: 0; }
+  .sheet form { display: flex; align-items: center; gap: 12px; padding: 10px 16px calc(10px + env(safe-area-inset-bottom)); border-top: 1px solid rgba(29, 42, 80, .12); }
+  .sheet form input { flex: 1; min-width: 0; height: 40px; padding: 0 14px; border: 1px solid rgba(29, 42, 80, .2); border-radius: 999px; background: #fff; font-size: 17px; outline: none; }
+  .sheet form input:focus { border-color: var(--stamp); }
+  .sheet .post { border: 0; background: none; padding: 0; color: var(--stamp); font-weight: 500; cursor: pointer; }
+  .sheet .post:disabled { opacity: .4; cursor: default; }
   .viewer .close, .viewer .step {
     position: fixed;
     display: grid;
@@ -264,13 +323,20 @@
     .lock { padding-left: 24px; font-size: 21px; }
     .album { padding-top: 20px; }
     .wall { grid-template-columns: repeat(2, 1fr); gap: 30px 18px; }
-    .wall .words { font-size: 16px; min-height: 44px; }
+    .wall .words { font-size: 16px; }
+    .bar { padding-left: 8px; font-size: 13px; }
     .viewer .step { top: auto; bottom: 16px; transform: none; }
     .viewer img { max-height: calc(100dvh - 240px); }
+    .viewer figure { margin-bottom: 80px; }
+    .sheet { width: 100vw; }
     .back { left: 14px; bottom: 14px; }
   }
+  @media (min-width: 700px) {
+    .sheet { margin: auto; border-radius: 18px; }
+  }
   @media (prefers-reduced-motion: reduce) {
-    .drop, .wall button { transition: none; }
+    .drop, .wall .card { transition: none; }
+    .sheet[open] { animation: none; }
   }
   /* Hold a card and drag it to change the order; the order is saved for both of us */
   .hint { margin: -10px 0 18px; font-size: 15px; line-height: 1.4; color: var(--ink-soft); font-weight: 300; }
@@ -320,14 +386,26 @@
   <figure>
     <img id="view-img" alt="">
     <figcaption>
+      <button class="bubble" id="view-bubble" type="button" aria-label="Comments"></button>
+      <span class="when"><input id="view-day" type="date" aria-label="Day of this picture"><span id="view-by"></span></span>
       <span class="text" id="view-text"></span>
-      <span class="meta" id="view-meta"></span>
+      <button class="plain all" id="view-all" type="button"></button>
       <button class="plain" id="view-remove" type="button" hidden>remove</button>
     </figcaption>
   </figure>
   <button class="close" id="view-close" type="button" aria-label="Close">×</button>
   <button class="step prev" id="view-prev" type="button" aria-label="Newer picture">‹</button>
   <button class="step next" id="view-next" type="button" aria-label="Older picture">›</button>
+</dialog>
+
+<dialog class="sheet" id="sheet" aria-label="Comments">
+  <header>Comments<button class="x" id="sheet-close" type="button" aria-label="Close">×</button></header>
+  <ul id="sheet-list"></ul>
+  <form id="comment-form" autocomplete="off">
+    <span class="avatar" id="me-avatar" aria-hidden="true"></span>
+    <input id="comment-text" type="text" maxlength="500" placeholder="Add a comment..." aria-label="Add a comment">
+    <button class="post" id="comment-post" type="submit" disabled>Post</button>
+  </form>
 </dialog>
 
 <p class="toast" id="toast" role="status" hidden></p>
@@ -389,22 +467,32 @@
     }
   }, { rootMargin: "400px" });
 
-  const day = iso => new Date(iso + "T12:00").toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
+  // A picture's day is the day it was posted, unless one of us changed it
+  const dayOf = p => p.taken ?? p.added.slice(0, 10);
+  const day = p => new Date(dayOf(p) + "T12:00").toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
+  // today on this phone's calendar, which can differ from the UTC one
+  const today = () => { const d = new Date(); return new Date(d - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10); };
+
+  const BUBBLE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M20.7 16.3A9 9 0 1 0 17.6 20l3.9 1.1z"/></svg>';
+  function bubble(p, button = el("button", { type: "button", className: "bubble" })) {
+    const n = p.comments?.length ?? 0;
+    button.innerHTML = BUBBLE + (n ? `<span>${n}</span>` : "");
+    button.ariaLabel = n ? `${n} comment${n === 1 ? "" : "s"}` : "Add a comment";
+    button.onclick = () => openComments(p.id);
+    return button;
+  }
 
   // ---- the wall -----------------------------------------------------------
 
   let pictures = [];
 
   function polaroid(p, index) {
-    const img = el("img", { className: "shot", alt: p.caption || `A picture from ${day(p.taken)}` });
+    const img = el("img", { className: "shot", alt: p.caption || `A picture from ${day(p)}` });
     img.dataset.id = p.id;
     nearby.observe(img);
-    const button = el("button", { type: "button", className: "tape" }, [
-      img,
-      el("span", { className: "words" }, [p.caption, el("small", { textContent: day(p.taken) })]),
-    ]);
-    button.addEventListener("click", () => show(index));
-    const li = el("li", {}, [button]);
+    const open = el("button", { type: "button", className: "open" }, [img, el("span", { className: "words", textContent: p.caption })]);
+    open.addEventListener("click", () => show(index));
+    const li = el("li", {}, [el("div", { className: "card tape" }, [open, el("div", { className: "bar" }, [el("span", { textContent: day(p) }), bubble(p)])])]);
     li.dataset.id = p.id;
     return li;
   }
@@ -477,11 +565,14 @@
     if (!p) return;
     showing = index;
     const img = $("view-img");
-    img.alt = p.caption || `A picture from ${day(p.taken)}`;
+    img.alt = p.caption || `A picture from ${day(p)}`;
     // the small copy straight away, the full one once it arrives
     img.src = urls.get(`${p.id}/thumb`) ?? "";
     $("view-text").textContent = p.caption;
-    $("view-meta").textContent = `${day(p.taken)}, added by ${p.by}`;
+    $("view-day").value = dayOf(p);
+    $("view-day").max = today();
+    $("view-by").textContent = `added by ${p.by}`;
+    drawCounts(p);
     $("view-remove").hidden = p.by !== me;
     $("view-remove").textContent = "remove";
     $("view-prev").disabled = index === 0;
@@ -501,8 +592,98 @@
   viewer.addEventListener("click", e => { if (e.target === viewer) viewer.close(); });
   viewer.addEventListener("close", () => { showing = -1; });
   viewer.addEventListener("keydown", e => {
+    if (e.target.closest("input")) return;  // arrows move the cursor in the comment box
     if (e.key === "ArrowLeft" && showing > 0) show(showing - 1);
     if (e.key === "ArrowRight" && showing < pictures.length - 1) show(showing + 1);
+  });
+
+  // the day under a picture can be changed by either of us
+  $("view-day").addEventListener("change", async () => {
+    const p = pictures[showing], taken = $("view-day").value;
+    if (!p || !taken || taken === dayOf(p)) return;
+    try { replacePicture((await api(`/pictures/${p.id}/day`, { taken })).picture); toast("Day changed."); }
+    catch (e) { $("view-day").value = dayOf(p); toast(e.message); }
+  });
+
+  // ---- comments -----------------------------------------------------------
+
+  const sheet = $("sheet");
+  let sheetFor = "";  // id of the picture whose comments are open
+
+  // "now", "5m", "3h", "2d", "4w", like Instagram
+  function ago(iso) {
+    const s = (Date.now() - new Date(iso)) / 1000;
+    if (s < 60) return "now";
+    for (const [unit, size] of [["w", 604800], ["d", 86400], ["h", 3600], ["m", 60]]) if (s >= size) return Math.floor(s / size) + unit;
+  }
+
+  const avatar = name => el("span", { className: `avatar ${name}`, textContent: name[0] ?? "?", ariaHidden: "true" });
+
+  function drawCounts(p) {
+    bubble(p, $("view-bubble"));
+    const n = p.comments?.length ?? 0;
+    $("view-all").textContent = n ? (n === 1 ? "View 1 comment" : `View all ${n} comments`) : "Add a comment...";
+    $("view-all").onclick = () => openComments(p.id);
+  }
+
+  function drawSheet() {
+    const p = pictures.find(x => x.id === sheetFor);
+    if (!p) return;
+    const list = p.comments ?? [];
+    $("sheet-list").replaceChildren(...(list.length ? list.map(c => {
+      const when = el("small", {}, [ago(c.date)]);
+      if (c.by === me) {
+        // two clicks, so nothing goes from a slip
+        const b = el("button", { type: "button", className: "plain", textContent: "Delete" });
+        b.addEventListener("click", async () => {
+          if (b.textContent === "Delete") { b.textContent = "Sure? Delete"; return; }
+          b.disabled = true;
+          try { replacePicture((await api(`/pictures/${p.id}/uncomment`, { comment: c.id })).picture); }
+          catch (e) { b.disabled = false; toast(e.message); }
+        });
+        when.append(b);
+      }
+      return el("li", {}, [avatar(c.by), el("div", { className: "said" }, [el("b", { textContent: c.by }), c.text, when])]);
+    }) : [el("li", { className: "none" }, [el("b", { textContent: "No comments yet" }), "Say something about this one."])]));
+    $("sheet-list").scrollTop = $("sheet-list").scrollHeight;
+  }
+
+  function openComments(id) {
+    sheetFor = id;
+    $("me-avatar").replaceWith(Object.assign(avatar(me), { id: "me-avatar" }));
+    drawSheet();
+    if (!sheet.open) sheet.showModal();
+    $("comment-text").focus();
+  }
+
+  // keeps the wall, the big view and the comments in step with what the server sent back
+  function replacePicture(next) {
+    const i = pictures.findIndex(p => p.id === next.id);
+    if (i < 0) return;
+    pictures[i] = next;
+    drawWall();
+    if (showing === i) { drawCounts(next); $("view-day").value = dayOf(next); }
+    if (sheetFor === next.id) drawSheet();
+  }
+
+  $("sheet-close").addEventListener("click", () => sheet.close());
+  sheet.addEventListener("click", e => { if (e.target === sheet) sheet.close(); });
+  sheet.addEventListener("close", () => { sheetFor = ""; });
+  $("comment-text").addEventListener("input", () => { $("comment-post").disabled = !$("comment-text").value.trim(); });
+
+  $("comment-form").addEventListener("submit", async e => {
+    e.preventDefault();
+    const input = $("comment-text");
+    if (!sheetFor || !input.value.trim()) return;
+    $("comment-post").disabled = true;
+    try {
+      replacePicture((await api(`/pictures/${sheetFor}/comment`, { text: input.value })).picture);
+      input.value = "";
+    } catch (err) {
+      toast(err.message);
+      $("comment-post").disabled = false;
+    }
+    input.focus();
   });
 
   // two clicks, so nothing goes from a slip
@@ -526,39 +707,6 @@
 
   // ---- adding pictures ----------------------------------------------------
 
-  // The day a phone photo was taken is in its EXIF data (DateTimeOriginal).
-  // Returns "YYYY-MM-DD", or "" when the file has none.
-  async function takenOn(file) {
-    try {
-      const v = new DataView(await file.slice(0, 256 * 1024).arrayBuffer());
-      if (v.getUint16(0) !== 0xffd8) return "";
-      let at = 2;
-      while (at + 4 < v.byteLength && v.getUint8(at) === 0xff) {
-        const marker = v.getUint8(at + 1), size = v.getUint16(at + 2);
-        if (marker === 0xe1 && v.getUint32(at + 4) === 0x45786966) {  // "Exif"
-          const tiff = at + 10, little = v.getUint16(tiff) === 0x4949;
-          const u16 = o => v.getUint16(tiff + o, little), u32 = o => v.getUint32(tiff + o, little);
-          const tags = ifd => {
-            const found = {};
-            for (let i = 0, n = u16(ifd); i < n; i++) found[u16(ifd + 2 + i * 12)] = ifd + 2 + i * 12;
-            return found;
-          };
-          const ascii = entry => {
-            const off = u32(entry + 8);
-            return Array.from({ length: 10 }, (_, i) => String.fromCharCode(v.getUint8(tiff + off + i))).join("");
-          };
-          const top = tags(u32(4));
-          const sub = top[0x8769] ? tags(u32(top[0x8769] + 8)) : {};
-          const entry = sub[0x9003] ?? sub[0x9004] ?? top[0x0132];
-          const date = entry ? ascii(entry).replace(/:/g, "-") : "";
-          return /^\d{4}-\d{2}-\d{2}$/.test(date) && date > "1990" ? date : "";
-        }
-        at += 2 + size;
-      }
-    } catch { /* not readable: fall back below */ }
-    return "";
-  }
-
   // Shrink to a JPEG no longer than `side` on the long side, as base64.
   async function shrink(bitmap, side, quality) {
     const scale = Math.min(1, side / Math.max(bitmap.width, bitmap.height));
@@ -575,15 +723,13 @@
 
   let waiting = [];  // { file, preview, caption, date, state, li }
 
-  async function addToTray(files) {
+  function addToTray(files) {
     const photos = [...files].filter(f => f.type.startsWith("image/"));
     if (photos.length < files.length) toast("Only pictures can go on the wall.");
     for (const file of photos) {
-      const today = new Date().toISOString().slice(0, 10);
-      const fromFile = file.lastModified ? new Date(file.lastModified).toISOString().slice(0, 10) : today;
       const item = { file, preview: URL.createObjectURL(file) };
       item.caption = el("input", { type: "text", maxLength: 300, placeholder: "write something under it...", ariaLabel: "Caption" });
-      item.date = el("input", { type: "date", value: (await takenOn(file)) || fromFile, max: today, ariaLabel: "Day it was taken" });
+      item.date = el("input", { type: "date", value: today(), max: today(), ariaLabel: "Day of this picture" });
       item.state = el("span", { className: "state" });
       const off = el("button", { type: "button", className: "off", textContent: "×", ariaLabel: "Take this one off" });
       item.li = el("li", { className: "tape" }, [off, el("img", { src: item.preview, alt: "" }), item.caption, item.date, item.state]);
@@ -650,7 +796,7 @@
   });
 
   // Pick up what the other one adds without a reload
-  const refresh = () => { if (!document.hidden && !$("album").hidden && !viewer.open && !dragging) loadPictures(); };
+  const refresh = () => { if (!document.hidden && !$("album").hidden && !viewer.open && !sheet.open && !dragging) loadPictures(); };
   setInterval(refresh, 60000);
   document.addEventListener("visibilitychange", refresh);
 

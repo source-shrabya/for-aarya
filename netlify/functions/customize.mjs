@@ -13,9 +13,12 @@
 //   POST /api/movies/<id>/watched   -> moves a bucket-list movie to watched
 //   POST /api/movies/<id>/delete    -> removes a movie
 //   GET  /api/pictures        -> our pictures, in our order (a new one goes on top)
-//   POST /api/pictures {photo, thumb, caption, taken} -> adds a picture (both base64 JPEGs)
+//   POST /api/pictures {photo, thumb, caption, taken} -> adds a picture (both base64 JPEGs); its day is today unless one is picked
 //   GET  /api/pictures/<id>/photo, /api/pictures/<id>/thumb -> the picture, or its small copy
 //   POST /api/pictures/<id>/delete  -> removes a picture, only by the one who added it
+//   POST /api/pictures/<id>/day {taken}  -> changes the day shown on a picture
+//   POST /api/pictures/<id>/comment {text} -> adds the asker's comment under a picture
+//   POST /api/pictures/<id>/uncomment {comment} -> removes a comment, only by the one who wrote it
 //   GET  /api/songs           -> songs we have sent each other, in our order, and who is asking
 //   GET  /api/songs/search?q=       -> songs matching a name, with artist, cover and a 30 second preview (from iTunes)
 //   GET  /api/songs/link?url=       -> the name and picture behind a YouTube or Spotify link
@@ -35,6 +38,7 @@ const MAX_PHOTO = 4 << 20;  // bytes in a letter photo or a picture
 const MAX_THUMB = 1 << 19;  // bytes in a picture's small copy
 const MAX_CAPTION = 300;    // characters under a picture
 const MAX_NOTE = 300;       // characters sent with a song
+const MAX_COMMENT = 500;    // characters in a comment under a picture
 const client = new Anthropic(); // reads ANTHROPIC_API_KEY
 
 const cors = origin => ({
@@ -113,6 +117,7 @@ async function addPicture(store, by, { photo, thumb, caption, taken }) {
     added,
     taken: dayOk(taken) ? taken : added.slice(0, 10),
     caption: typeof caption === "string" ? caption.trim().slice(0, MAX_CAPTION) : "",
+    comments: [],
   };
   await store.set(`picture-${picture.id}`, big);
   await store.set(`picture-thumb-${picture.id}`, small);
@@ -303,7 +308,7 @@ export default async (req) => {
   const route = new URL(req.url).pathname.replace(/^\/api\//, "");
   const [, letterId, letterAction] = route.match(/^letters\/([a-z0-9]+)\/(photo|delete)$/) ?? [];
   const [, movieId, movieAction] = route.match(/^movies\/([a-z0-9]+)\/(watched|delete)$/) ?? [];
-  const [, pictureId, pictureAction] = route.match(/^pictures\/([a-z0-9]+)\/(photo|thumb|delete)$/) ?? [];
+  const [, pictureId, pictureAction] = route.match(/^pictures\/([a-z0-9]+)\/(photo|thumb|delete|day|comment|uncomment)$/) ?? [];
   const [, songId, songAction] = route.match(/^songs\/([a-z0-9]+)\/(love|delete)$/) ?? [];
   const [, orderOf] = route.match(/^(movies|pictures|songs)\/order$/) ?? [];
 
@@ -378,6 +383,28 @@ export default async (req) => {
     if (route === "pictures") {
       const picture = await addPicture(store, me, await req.json());
       if (!picture) return send({ error: "That picture didn't come through. Try it again." }, 400);
+      return send({ picture });
+    }
+    if (pictureAction === "day" || pictureAction === "comment" || pictureAction === "uncomment") {
+      const pictures = await picturesIn(store);
+      const picture = pictures.find(p => p.id === pictureId);
+      if (!picture) return send({ error: "That picture is gone." }, 404);
+      const body = await req.json();
+      picture.comments ??= [];
+      if (pictureAction === "day") {
+        if (!dayOk(body.taken)) return send({ error: "Pick a day first." }, 400);
+        picture.taken = body.taken;
+      } else if (pictureAction === "comment") {
+        const words = text(body.text, MAX_COMMENT);
+        if (!words) return send({ error: "Write something first." }, 400);
+        picture.comments.push({ id: newId(), by: me, date: new Date().toISOString(), text: words });
+      } else {
+        const comment = picture.comments.find(c => c.id === body.comment);
+        if (!comment) return send({ error: "That comment is already gone." }, 404);
+        if (comment.by !== me) return send({ error: "Only the one who wrote it can remove it." }, 403);
+        picture.comments = picture.comments.filter(c => c !== comment);
+      }
+      await store.setJSON("pictures", pictures);
       return send({ picture });
     }
     if (pictureAction === "delete") {
