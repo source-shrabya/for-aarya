@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">आर्याको लागि</string>
+    <string name="widget_name">हाम्रो तस्बिर</string>
+    <string name="widget_description">The newest picture the other one posted</string>
     <color name="icon_background">#8C2F3B</color>
     <color name="paper">#C3B9A7</color>
     <!-- The notebook paper colour behind everything, so opening the app does not flash white -->

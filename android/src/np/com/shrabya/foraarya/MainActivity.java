@@ -15,6 +15,8 @@ import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 
+import org.json.JSONArray;
+
 import java.net.HttpURLConnection;
 import java.net.URL;
 
@@ -23,6 +25,7 @@ import java.net.URL;
 public class MainActivity extends Activity {
     private static final String HOME = "https://source-shrabya.github.io/for-aarya/";
     private static final String SITE = "source-shrabya.github.io";
+    static final String OPEN = "open";  // a page to open, e.g. "pictures.html" when the widget is tapped
     private static final int PICK_FILES = 1;
     private static final String OFFLINE =
         "<body style=\"margin:0;background:#c3b9a7;color:#1d2a50;font:22px/1.6 serif;"
@@ -53,6 +56,11 @@ public class MainActivity extends Activity {
             }
 
             @Override
+            public void onPageFinished(WebView view, String url) {
+                savePassword();
+            }
+
+            @Override
             public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
                 if (request.isForMainFrame()) view.loadDataWithBaseURL(null, OFFLINE, "text/html", "utf-8", null);
             }
@@ -76,8 +84,37 @@ public class MainActivity extends Activity {
             }
         });
 
-        if (saved != null) web.restoreState(saved);
+        String page = getIntent().getStringExtra(OPEN);
+        if (page != null) web.loadUrl(HOME + page);
+        else if (saved != null) web.restoreState(saved);
         else web.loadUrl(HOME);
+    }
+
+    // the widget was tapped while the app was already open
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        String page = intent.getStringExtra(OPEN);
+        if (page != null) web.loadUrl(HOME + page);
+    }
+
+    // The site keeps the password for this visit only. The widget needs it to fetch pictures,
+    // so it is copied into the app's own private storage, which no other app can read.
+    private void savePassword() {
+        String url = web.getUrl();
+        if (url == null || !url.contains(SITE)) return;
+        web.evaluateJavascript("sessionStorage.getItem('letter-password')", new ValueCallback<String>() {
+            public void onReceiveValue(String value) {
+                String password;
+                try { password = new JSONArray("[" + value + "]").optString(0, ""); }
+                catch (Exception e) { return; }
+                if (password.isEmpty() || "null".equals(password)) return;
+                SharedPreferences prefs = PictureWidget.prefs(MainActivity.this);
+                if (password.equals(prefs.getString("password", "")) && !prefs.getBoolean("locked", false)) return;
+                prefs.edit().putString("password", password).putBoolean("locked", false).apply();
+                PictureWidget.refreshSoon(MainActivity.this);
+            }
+        });
     }
 
     private void openOutside(Uri url) {
@@ -120,6 +157,8 @@ public class MainActivity extends Activity {
     @Override
     protected void onPause() {
         super.onPause();
+        savePassword();
+        PictureWidget.refreshSoon(this);
         web.onPause();
     }
 
@@ -128,6 +167,7 @@ public class MainActivity extends Activity {
         super.onResume();
         web.onResume();
         checkForUpdate();
+        PictureWidget.refreshSoon(this);
     }
 
     // GitHub Pages stamps every file with the time of the last push. When that time changes,
