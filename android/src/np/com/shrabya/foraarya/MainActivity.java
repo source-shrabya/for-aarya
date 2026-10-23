@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.content.ActivityNotFoundException;
 import android.content.ClipData;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.Bundle;
 import android.webkit.ValueCallback;
@@ -13,6 +14,9 @@ import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+
+import java.net.HttpURLConnection;
+import java.net.URL;
 
 // The whole app is the website in a full-screen browser view. Our own pages open inside it;
 // YouTube, Spotify, IMDb and every other site open in their own apps.
@@ -123,5 +127,34 @@ public class MainActivity extends Activity {
     protected void onResume() {
         super.onResume();
         web.onResume();
+        checkForUpdate();
+    }
+
+    // GitHub Pages stamps every file with the time of the last push. When that time changes,
+    // throw away the saved copies and reload, so the app always shows the site as it is now.
+    private void checkForUpdate() {
+        new Thread(new Runnable() { public void run() {
+            String stamp;
+            try {
+                HttpURLConnection head = (HttpURLConnection) new URL(HOME).openConnection();
+                head.setRequestMethod("HEAD");
+                head.setUseCaches(false);
+                head.setConnectTimeout(8000);
+                head.setReadTimeout(8000);
+                stamp = head.getHeaderField("Last-Modified");
+                head.disconnect();
+            } catch (Exception e) {
+                return;  // offline, try again next time
+            }
+            if (stamp == null) return;
+            SharedPreferences prefs = getSharedPreferences("site", MODE_PRIVATE);
+            String seen = prefs.getString("lastModified", null);
+            if (stamp.equals(seen)) return;
+            prefs.edit().putString("lastModified", stamp).apply();
+            runOnUiThread(new Runnable() { public void run() {
+                web.clearCache(true);
+                web.reload();
+            } });
+        } }).start();
     }
 }
