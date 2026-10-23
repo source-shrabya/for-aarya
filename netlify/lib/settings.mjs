@@ -17,7 +17,7 @@ export const ART = {
 };
 
 export const FONTS = [
-  "Kalam", "Caveat", "Patrick Hand", "Indie Flower", "Dancing Script",
+  "Tiro Devanagari Hindi", "Caveat", "Patrick Hand", "Indie Flower", "Dancing Script",
   "Homemade Apple", "Shadows Into Light", "Gloria Hallelujah",
 ];
 const PATTERNS = ["lined", "grid", "dots", "plain"];
@@ -29,7 +29,7 @@ const EFFECTS = ["none", "hearts", "petals", "sparkles", "snow", "ladybugs", "st
 export const DEFAULT_SETTINGS = {
   paper: { color: "#c3b9a7", lines: "#5c6876", margin: "#c47868", pattern: "lined" },
   ink: "#1d2a50",
-  font: "Kalam",
+  font: "Tiro Devanagari Hindi",
   letter: { size: "medium", tilt: 0 },
   pictures: {
     style: "polaroid",
@@ -149,7 +149,7 @@ You never touch the letter photo itself or the password; those are fixed. Everyt
 
 - paper: the page background. color, lines (ruled-line colour), margin (the red margin-line colour) are 6-digit hex like "#c3b9a7". pattern is ${PATTERNS.join(", ")}. The original paper is ${JSON.stringify(DEFAULT_SETTINGS.paper)}; it matches the letter photo, so if she drifts far from it the photo will look like a separate sheet. That is fine if she asks for it.
 - ink: hex colour for handwritten notes.
-- font: handwriting font for notes, one of ${FONTS.join(", ")}. Only Kalam can write Nepali (Devanagari) text, so use Kalam whenever a note is in Nepali.
+- font: handwriting font for notes, one of ${FONTS.join(", ")}. Only Tiro Devanagari Hindi can write Nepali (Devanagari) text, so use it whenever a note is in Nepali.
 - letter: size (small, medium, large) and tilt in degrees (-5 to 5).
 - pictures: style (taped = masking tape at an angle, polaroid = white frame with the caption underneath, plain = no frame) and two lists, left and right, top to bottom, at most 10 each. Each picture is {src, caption}. src is one of these files:
 ${Object.entries(ART).map(([k, v]) => `  ${k}: ${v}`).join("\n")}
