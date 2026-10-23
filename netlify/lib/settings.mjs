@@ -18,7 +18,7 @@ export const ART = {
 
 export const FONTS = [
   "Tiro Devanagari Hindi", "Caveat", "Patrick Hand", "Indie Flower", "Dancing Script",
-  "Homemade Apple", "Shadows Into Light", "Gloria Hallelujah",
+  "Homemade Apple", "Shadows Into Light", "Gloria Hallelujah", "Lora",
 ];
 const PATTERNS = ["lined", "grid", "dots", "plain"];
 const SIZES = ["small", "medium", "large"];
@@ -29,7 +29,7 @@ const EFFECTS = ["none", "hearts", "petals", "sparkles", "snow", "ladybugs", "st
 export const DEFAULT_SETTINGS = {
   paper: { color: "#c3b9a7", lines: "#5c6876", margin: "#c47868", pattern: "lined" },
   ink: "#1d2a50",
-  font: "Homemade Apple",
+  font: "Lora",
   letter: { size: "medium", tilt: 0 },
   pictures: {
     style: "polaroid",
