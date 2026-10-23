@@ -12,7 +12,7 @@
 //   POST /api/movies {title, list, year, poster, imdb} -> adds a movie to "watched" or "bucket"
 //   POST /api/movies/<id>/watched   -> moves a bucket-list movie to watched
 //   POST /api/movies/<id>/delete    -> removes a movie
-//   GET  /api/pictures        -> our pictures, newest taken first
+//   GET  /api/pictures        -> our pictures, newest posted first
 //   POST /api/pictures {photo, thumb, caption, taken} -> adds a picture (both base64 JPEGs)
 //   GET  /api/pictures/<id>/photo, /api/pictures/<id>/thumb -> the picture, or its small copy
 //   POST /api/pictures/<id>/delete  -> removes a picture, only by the one who added it
@@ -101,7 +101,7 @@ const jpeg = (b64, max) => {
   return bytes.length <= max && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff ? bytes : null;
 };
 const dayOk = d => typeof d === "string" && /^\d{4}-\d{2}-\d{2}$/.test(d) && !Number.isNaN(Date.parse(d));
-const newestFirst = (a, b) => b.taken.localeCompare(a.taken) || b.added.localeCompare(a.added);
+const newestFirst = (a, b) => b.added.localeCompare(a.added);
 
 async function addPicture(store, by, { photo, thumb, caption, taken }) {
   const big = jpeg(photo, MAX_PHOTO), small = jpeg(thumb, MAX_THUMB);
@@ -312,7 +312,7 @@ export default async (req) => {
       if (!bytes) return send({ error: "not found" }, 404);
       return new Response(bytes, { headers: { ...cors(origin), "Content-Type": "image/jpeg", "Cache-Control": "private, max-age=31536000" } });
     }
-    if (req.method === "GET" && route === "pictures") return send({ pictures: await picturesIn(store) });
+    if (req.method === "GET" && route === "pictures") return send({ pictures: (await picturesIn(store)).sort(newestFirst) });
     if (req.method === "GET" && (pictureAction === "photo" || pictureAction === "thumb")) {
       const bytes = await store.get(`picture-${pictureAction === "thumb" ? "thumb-" : ""}${pictureId}`, { type: "arrayBuffer" });
       if (!bytes) return send({ error: "not found" }, 404);

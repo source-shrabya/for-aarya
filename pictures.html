@@ -12,7 +12,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;1,400;1,500&family=Tiro+Devanagari+Hindi:ital@0;1&display=swap" rel="stylesheet">
 <style>
   /* The same notebook paper as the letter page. Our pictures are polaroids taped to it,
-     grouped by the month they were taken, newest first. */
+     grouped by the month they were posted, newest first. */
   :root {
     --paper: #c3b9a7;
     --rule: color-mix(in srgb, #5c6876 55%, transparent);
@@ -385,7 +385,6 @@
   }, { rootMargin: "400px" });
 
   const day = iso => new Date(iso + "T12:00").toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
-  const monthOf = iso => new Date(iso + "T12:00").toLocaleDateString("en-GB", { month: "long", year: "numeric" });
 
   // ---- the wall -----------------------------------------------------------
 
@@ -406,7 +405,7 @@
   function drawWall() {
     const months = [];
     pictures.forEach((p, i) => {
-      const name = monthOf(p.taken);
+      const name = new Date(p.added).toLocaleDateString("en-GB", { month: "long", year: "numeric" });
       if (months.at(-1)?.name !== name) months.push({ name, items: [] });
       months.at(-1).items.push(polaroid(p, i));
     });
