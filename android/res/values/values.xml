@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">For Aarya</string>
+    <color name="icon_background">#8C2F3B</color>
+    <color name="paper">#C3B9A7</color>
+    <!-- The notebook paper colour behind everything, so opening the app does not flash white -->
+    <style name="Paper" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/paper</item>
+        <item name="android:statusBarColor">@color/paper</item>
+        <item name="android:navigationBarColor">@color/paper</item>
+        <item name="android:windowLightStatusBar">true</item>
+    </style>
+</resources>

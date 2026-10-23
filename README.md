@@ -52,6 +52,12 @@ Nobody else can see the lists, the letters or the photos: every request to the s
 
 The password is kept in the browser tab after the letter opens, so going to the movies page and back does not ask for it again. Closing the tab forgets it.
 
+## The Android app
+
+`android/` holds a small Android app that opens the site full screen, so it sits on her phone like any other app with the "AT" icon. It loads the live site, so changes to the pages show up in the app without a new APK. Our own pages open inside the app; YouTube, Spotify and IMDb links open in their own apps. Photos can be picked for letters and the picture wall.
+
+`android/build.sh` builds `android/For-Aarya.apk` with the Android SDK's own tools (no Gradle). For a new version, run `android/build.sh 2 1.1` (a higher version number each time). The signing key is in `../love-letter-app-key`, outside the repo. Every update must be signed with that key, so keep that folder backed up.
+
 ## Put it online
 
 Upload `index.html`, `movies.html`, `pictures.html`, `songs.html`, `letter.js` and the `art` folder. Do not upload `letter.jpg`, because that is the unlocked letter.
