@@ -26,6 +26,9 @@
 //   POST /api/songs/<id>/love       -> adds or takes back the asker's heart
 //   POST /api/songs/<id>/delete     -> removes a song, only by the one who sent it
 //   POST /api/movies/order, /api/pictures/order, /api/songs/order {ids} -> saves the order we dragged them into
+//   GET  /api/avatars         -> when each of us last changed our profile picture (null if never), and who is asking
+//   GET  /api/avatars/<name>  -> that profile picture
+//   POST /api/avatars {photo} -> sets the asker's profile picture (a small square base64 JPEG)
 import Anthropic from "@anthropic-ai/sdk";
 import { getStore } from "@netlify/blobs";
 import { createHash, timingSafeEqual } from "node:crypto";
@@ -39,6 +42,7 @@ const MAX_THUMB = 1 << 19;  // bytes in a picture's small copy
 const MAX_CAPTION = 300;    // characters under a picture
 const MAX_NOTE = 300;       // characters sent with a song
 const MAX_COMMENT = 500;    // characters in a comment under a picture
+const MAX_AVATAR = 1 << 18; // bytes in a profile picture
 const client = new Anthropic(); // reads ANTHROPIC_API_KEY
 
 const cors = origin => ({
@@ -311,6 +315,7 @@ export default async (req) => {
   const [, pictureId, pictureAction] = route.match(/^pictures\/([a-z0-9]+)\/(photo|thumb|delete|day|comment|uncomment)$/) ?? [];
   const [, songId, songAction] = route.match(/^songs\/([a-z0-9]+)\/(love|delete)$/) ?? [];
   const [, orderOf] = route.match(/^(movies|pictures|songs)\/order$/) ?? [];
+  const [, avatarOf] = route.match(/^avatars\/(Aarya|Shrabya)$/) ?? [];
 
   try {
     if (req.method === "GET" && route === "settings") return send({ settings: await load(store), me });
@@ -335,6 +340,12 @@ export default async (req) => {
       if (!bytes) return send({ error: "not found" }, 404);
       return new Response(bytes, { headers: { ...cors(origin), "Content-Type": "image/jpeg", "Cache-Control": "private, max-age=31536000" } });
     }
+    if (req.method === "GET" && route === "avatars") return send({ avatars: { Aarya: null, Shrabya: null, ...await store.get("avatars", { type: "json" }) }, me });
+    if (req.method === "GET" && avatarOf) {
+      const bytes = await store.get(`avatar-${avatarOf}`, { type: "arrayBuffer" });
+      if (!bytes) return send({ error: "not found" }, 404);
+      return new Response(bytes, { headers: { ...cors(origin), "Content-Type": "image/jpeg", "Cache-Control": "private, max-age=31536000" } });
+    }
     if (req.method === "GET" && route === "songs") return send({ songs: await songsIn(store), me });
     if (req.method === "GET" && route === "songs/search") {
       try { return send({ results: await searchSongs(new URL(req.url).searchParams.get("q") ?? "") }); }
@@ -347,6 +358,14 @@ export default async (req) => {
     }
     if (req.method !== "POST") return send({ error: "not found" }, 404);
 
+    if (route === "avatars") {
+      const bytes = jpeg((await req.json()).photo, MAX_AVATAR);
+      if (!bytes) return send({ error: "That picture didn't come through. Try another one." }, 400);
+      await store.set(`avatar-${me}`, bytes);
+      const avatars = { ...await store.get("avatars", { type: "json" }), [me]: Date.now() };
+      await store.setJSON("avatars", avatars);
+      return send({ avatars: { Aarya: null, Shrabya: null, ...avatars } });
+    }
     if (route === "songs") {
       const { song, error } = await addSong(store, me, await req.json());
       if (error) return send({ error }, 400);

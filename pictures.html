@@ -273,8 +273,14 @@
   .sheet li { display: flex; gap: 12px; padding: 10px 0; }
   .sheet .none { flex-direction: column; align-items: center; gap: 4px; padding-top: 48px; text-align: center; color: var(--ink-soft); }
   .sheet .none b { font-size: 22px; font-weight: 500; color: var(--ink); }
-  .avatar { flex: none; display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; background: var(--ink); color: #fbf6ea; font-size: 16px; font-style: normal; }
-  .avatar.Aarya { background: var(--stamp); }
+  .avatar { flex: none; display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; background: var(--ink) center / cover; color: #fbf6ea; font-size: 16px; font-style: normal; }
+  .avatar.Aarya { background-color: var(--stamp); }
+  .avatar.photo { color: transparent; }
+  /* your own circle by the comment box: tap it to change your profile picture */
+  .mine { position: relative; flex: none; cursor: pointer; }
+  .mine input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+  .mine:focus-within .avatar { outline: 2px dashed var(--stamp); outline-offset: 2px; }
+  .mine::after { content: "+"; position: absolute; right: -3px; bottom: -3px; display: grid; place-items: center; width: 16px; height: 16px; border-radius: 50%; background: var(--stamp); color: #fff; font: 600 13px/1 sans-serif; box-shadow: 0 0 0 2px var(--polaroid); }
   .sheet .said { flex: 1; min-width: 0; font-size: 17px; line-height: 1.35; overflow-wrap: anywhere; }
   .sheet .said b { font-weight: 500; margin-right: 6px; }
   .sheet .said small { display: flex; gap: 14px; margin-top: 2px; font-size: 13px; color: var(--ink-soft); }
@@ -402,7 +408,10 @@
   <header>Comments<button class="x" id="sheet-close" type="button" aria-label="Close">×</button></header>
   <ul id="sheet-list"></ul>
   <form id="comment-form" autocomplete="off">
-    <span class="avatar" id="me-avatar" aria-hidden="true"></span>
+    <label class="mine" title="Change your profile picture">
+      <span class="avatar" id="me-avatar" aria-hidden="true"></span>
+      <input id="avatar-pick" type="file" accept="image/*" aria-label="Change your profile picture">
+    </label>
     <input id="comment-text" type="text" maxlength="500" placeholder="Add a comment..." aria-label="Add a comment">
     <button class="post" id="comment-post" type="submit" disabled>Post</button>
   </form>
@@ -537,6 +546,7 @@
       me = who ?? "";
       if (JSON.stringify(list) !== JSON.stringify(pictures)) { pictures = list; drawWall(); }
       else if (!$("months").children.length) drawWall();
+      if (!Object.keys(avatars).length) loadAvatars();
       $("album").hidden = false;
       $("lock").hidden = true;
       return true;
@@ -617,7 +627,52 @@
     for (const [unit, size] of [["w", 604800], ["d", 86400], ["h", 3600], ["m", 60]]) if (s >= size) return Math.floor(s / size) + unit;
   }
 
-  const avatar = name => el("span", { className: `avatar ${name}`, textContent: name[0] ?? "?", ariaHidden: "true" });
+  // Profile pictures: each of us sets our own. They need the password too, so they come as object URLs.
+  let avatars = {};  // name -> when it was last changed, or null
+  const faces = new Map();  // "<name>/<when>" -> object URL
+  function avatar(name) {
+    const a = el("span", { className: `avatar ${name}`, textContent: name[0] ?? "?", ariaHidden: "true" });
+    const when = avatars[name];
+    if (!when) return a;
+    const key = `${name}/${when}`;
+    const paint = url => { a.style.backgroundImage = `url("${url}")`; a.classList.add("photo"); };
+    if (faces.has(key)) paint(faces.get(key));
+    else fetch(`${API}/avatars/${name}?v=${when}`, { headers: { "x-letter-password": password } })
+      .then(res => res.ok ? res.blob() : Promise.reject())
+      .then(blob => { faces.set(key, URL.createObjectURL(blob)); paint(faces.get(key)); })
+      .catch(() => { /* the letter stays */ });
+    return a;
+  }
+  const loadAvatars = () => api("/avatars").then(d => { avatars = d.avatars; }).catch(() => {});
+
+  function drawMine() {
+    $("me-avatar").replaceWith(Object.assign(avatar(me), { id: "me-avatar" }));
+  }
+
+  // a square from the middle of the picture, 256 pixels a side
+  async function square(file) {
+    const bitmap = await createImageBitmap(file, { imageOrientation: "from-image" });
+    const side = Math.min(bitmap.width, bitmap.height);
+    const canvas = el("canvas", { width: 256, height: 256 });
+    canvas.getContext("2d").drawImage(bitmap, (bitmap.width - side) / 2, (bitmap.height - side) / 2, side, side, 0, 0, 256, 256);
+    const blob = await new Promise(done => canvas.toBlob(done, "image/jpeg", 0.85));
+    const dataUrl = await new Promise(done => { const r = new FileReader(); r.onload = () => done(r.result); r.readAsDataURL(blob); });
+    return dataUrl.slice(dataUrl.indexOf(",") + 1);
+  }
+
+  $("avatar-pick").addEventListener("change", async () => {
+    const file = $("avatar-pick").files[0];
+    $("avatar-pick").value = "";
+    if (!file) return;
+    try {
+      ({ avatars } = await api("/avatars", { photo: await square(file) }));
+      drawMine();
+      drawSheet();
+      toast("Your picture is changed.");
+    } catch (e) {
+      toast(e.status ? e.message : "That picture didn't work. Try a JPEG or PNG.");
+    }
+  });
 
   function drawCounts(p) {
     bubble(p, $("view-bubble"));
@@ -650,10 +705,12 @@
 
   function openComments(id) {
     sheetFor = id;
-    $("me-avatar").replaceWith(Object.assign(avatar(me), { id: "me-avatar" }));
+    drawMine();
     drawSheet();
     if (!sheet.open) sheet.showModal();
     $("comment-text").focus();
+    // the other one may have changed theirs since
+    loadAvatars().then(() => { if (sheet.open) { drawMine(); drawSheet(); } });
   }
 
   // keeps the wall, the big view and the comments in step with what the server sent back
