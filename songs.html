@@ -1,0 +1,612 @@
+<!doctype html>
+<html lang="ne">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>हाम्रा गीतहरू</title>
+<link rel="icon" type="image/png" sizes="32x32" href="icon-32.png?v=2">
+<link rel="apple-touch-icon" href="apple-touch-icon.png?v=2">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Homemade+Apple&family=Tiro+Devanagari+Hindi:ital@0;1&display=swap" rel="stylesheet">
+<style>
+  /* The same notebook paper as the letter page. Each song we send is a record in its sleeve;
+     playing the preview slides the record out and spins it. */
+  :root {
+    --paper: #c3b9a7;
+    --rule: color-mix(in srgb, #5c6876 55%, transparent);
+    --margin: color-mix(in srgb, #c47868 70%, transparent);
+    --ink: #1d2a50;
+    --ink-soft: #55608a;
+    --stamp: #a3333f;
+    --card: #f4e4c1;
+    --vinyl: #18181c;
+    --gap: 44px;
+  }
+  * { box-sizing: border-box; }
+  html {
+    min-height: 100%;
+    background-color: var(--paper);
+    background-image:
+      linear-gradient(to right, transparent 119px, var(--margin) 119px, var(--margin) 121px, transparent 121px),
+      linear-gradient(to bottom, transparent calc(var(--gap) - 2px), var(--rule) calc(var(--gap) - 2px), var(--rule) var(--gap));
+    background-size: 100% 100%, 100% var(--gap);
+    background-repeat: no-repeat, repeat;
+  }
+  body {
+    margin: 0;
+    min-height: 100dvh;
+    color: var(--ink);
+    font: 400 20px/1.4 "Homemade Apple", "Tiro Devanagari Hindi", serif;
+    overflow-x: hidden;
+  }
+  button, input, textarea { font: inherit; color: inherit; }
+  :focus-visible { outline: 2px dashed var(--stamp); outline-offset: 3px; }
+
+  .back {
+    position: fixed;
+    left: 20px;
+    bottom: 20px;
+    z-index: 10;
+    padding: 10px 18px;
+    border-radius: 999px;
+    background: var(--stamp);
+    color: #f6efe2;
+    font-size: 20px;
+    line-height: 1;
+    text-decoration: none;
+    box-shadow: 0 4px 14px rgba(140, 47, 59, .35);
+  }
+
+  /* Asked only when the letter page was not opened first in this tab */
+  .lock { padding: var(--gap) 24px 0 140px; font-size: 24px; line-height: var(--gap); }
+  .lock[hidden] { display: none; }
+  .lock p, .lock form { margin: 0; }
+  .lock form { display: flex; align-items: center; gap: 14px; }
+  .lock input, .lock button { background: transparent; border: 0; outline: none; height: var(--gap); }
+  .lock input { width: 220px; letter-spacing: 2px; }
+  .lock button { cursor: pointer; text-decoration: underline; text-underline-offset: 6px; }
+  .lock .error { color: var(--stamp); min-height: var(--gap); }
+
+  .songs { width: min(1000px, 100vw - 32px); margin: 0 auto; padding: 36px 0 140px; }
+  .songs[hidden] { display: none; }
+  .songs h1 {
+    margin: 0;
+    font-size: clamp(44px, 7vw, 68px);
+    line-height: 1.1;
+    font-weight: 400;
+    text-align: center;
+    transform: rotate(-2deg);
+  }
+  .songs .sub { margin: 6px 0 0; text-align: center; color: var(--ink-soft); font-size: 17px; }
+
+  /* Finding a song: search, or paste a link */
+  .finder { position: relative; margin: 40px auto 20px; max-width: 660px; z-index: 5; }
+  .finder label {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 20px;
+    background: var(--card);
+    border-radius: 999px;
+    box-shadow: 0 2px 3px rgba(40, 30, 20, .2), 0 8px 18px rgba(40, 30, 20, .14);
+  }
+  .finder svg { flex: none; width: 24px; height: 24px; color: var(--stamp); }
+  .finder input { flex: 1; min-width: 0; border: 0; background: transparent; font-size: 20px; outline: none; }
+  .finder input::placeholder { color: rgba(29, 42, 80, .45); }
+  .results {
+    position: absolute;
+    left: 12px;
+    right: 12px;
+    top: calc(100% + 6px);
+    margin: 0;
+    padding: 6px;
+    list-style: none;
+    background: #fbf6ea;
+    border-radius: 10px;
+    box-shadow: 0 10px 30px rgba(40, 30, 20, .28);
+    max-height: min(60vh, 520px);
+    overflow-y: auto;
+  }
+  .results[hidden] { display: none; }
+  .results li { display: flex; align-items: center; gap: 12px; padding: 6px 8px; border-radius: 8px; }
+  .results li + li { border-top: 1px dashed rgba(29, 42, 80, .15); }
+  .results .what { flex: 1; min-width: 0; line-height: 1.25; }
+  .results .what b { display: block; font-weight: 400; font-size: 17px; overflow-wrap: anywhere; }
+  .results .what small { color: var(--ink-soft); font-size: 14px; }
+  .results .note { color: var(--ink-soft); padding: 10px 12px; font-size: 16px; }
+  .results .cover { width: 46px; }
+  .pill {
+    flex: none;
+    border: 1.5px solid var(--ink);
+    border-radius: 999px;
+    background: transparent;
+    padding: 0 12px;
+    font-size: 15px;
+    line-height: 30px;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+  .pill:hover { background: var(--ink); color: #fbf6ea; }
+  .pill.red { border-color: var(--stamp); color: var(--stamp); }
+  .pill.red:hover { background: var(--stamp); color: #fbf6ea; }
+  .pill:disabled { opacity: .5; cursor: default; }
+
+  /* Covers, or a drawn note when there isn't one */
+  .cover {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 100%;
+    aspect-ratio: 1;
+    object-fit: cover;
+    border-radius: 3px;
+    background: #2a2f45;
+    color: #f4e4c1;
+    font-size: 40px;
+    line-height: 1;
+  }
+  .results .cover { font-size: 20px; }
+
+  /* Writing the note that goes with it */
+  .compose {
+    display: flex;
+    gap: 18px;
+    margin: 0 auto 20px;
+    max-width: 660px;
+    padding: 18px;
+    background: #fbf6ea;
+    border-radius: 10px;
+    box-shadow: 0 2px 3px rgba(40, 30, 20, .2), 0 8px 18px rgba(40, 30, 20, .14);
+  }
+  .compose[hidden] { display: none; }
+  .compose .cover { width: 110px; }
+  .compose form { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+  .compose input, .compose textarea {
+    width: 100%;
+    border: 0;
+    border-bottom: 1.5px dashed rgba(29, 42, 80, .35);
+    background: transparent;
+    font-size: 17px;
+    line-height: 1.6;
+    outline: none;
+  }
+  .compose textarea { min-height: 84px; resize: vertical; }
+  .compose ::placeholder { color: rgba(29, 42, 80, .45); }
+  .compose .buttons { display: flex; gap: 10px; align-items: center; margin-top: 4px; }
+  .compose .error { margin: 0; color: var(--stamp); font-size: 15px; }
+
+  .count { margin: 40px 0 18px; font-size: 30px; line-height: 1.2; }
+  .count span { font-size: 17px; color: var(--ink-soft); }
+  .empty { color: var(--ink-soft); font-size: 18px; }
+
+  /* A record: the sleeve with the disc peeking out of it, and the card beside it */
+  .records { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 440px), 1fr)); gap: 26px 30px; margin: 0; padding: 0; list-style: none; }
+  .record {
+    display: flex;
+    gap: 16px;
+    padding: 14px 16px 14px 14px;
+    background: var(--card);
+    border-radius: 6px;
+    box-shadow: 0 2px 2px rgba(40, 30, 20, .2), 0 8px 16px rgba(40, 30, 20, .14);
+    transform: rotate(var(--tilt, 0deg));
+  }
+  .records li:nth-child(4n+1) .record { --tilt: -.6deg; --label: #c4544f; }
+  .records li:nth-child(4n+2) .record { --tilt: .5deg; --label: #e0a33b; background: #f3d7cf; }
+  .records li:nth-child(4n+3) .record { --tilt: -.3deg; --label: #5b8a6a; background: #dbe7d4; }
+  .records li:nth-child(4n+4) .record { --tilt: .7deg; --label: #6a79b0; background: #d8e1ec; }
+  .sleeve { position: relative; flex: none; width: 118px; height: 118px; margin-right: 26px; }
+  .sleeve .cover { position: relative; z-index: 1; width: 118px; box-shadow: 2px 2px 6px rgba(0, 0, 0, .3); }
+  .disc {
+    position: absolute;
+    inset: 4px;
+    transform: translateX(22%);
+    transition: transform .6s cubic-bezier(.3, .7, .3, 1);
+  }
+  .disc i {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background:
+      conic-gradient(from 0deg, transparent 0 30deg, rgba(255, 255, 255, .13) 50deg, transparent 70deg 210deg, rgba(255, 255, 255, .1) 230deg, transparent 250deg),
+      radial-gradient(circle, #f4e4c1 0 3%, var(--label) 3.5% 30%, var(--vinyl) 31%),
+      repeating-radial-gradient(circle, var(--vinyl) 0 2px, #2a2a30 2px 3px);
+    background-blend-mode: normal, normal, normal;
+  }
+  .playing .disc { transform: translateX(46%); }
+  .playing .disc i { animation: spin 1.8s linear infinite; }
+  @keyframes spin { to { transform: rotate(1turn); } }
+
+  .info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+  .info .name { font-size: 19px; line-height: 1.3; overflow-wrap: anywhere; }
+  .info .artist { font-size: 15px; line-height: 1.3; color: var(--ink-soft); overflow-wrap: anywhere; }
+  .info .from { font-size: 13px; line-height: 1.3; color: var(--ink-soft); margin-top: 2px; }
+  .info .said { margin: 8px 0 0; font-size: 16px; line-height: 1.55; overflow-wrap: anywhere; }
+  .actions { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; margin-top: auto; padding-top: 10px; font-size: 14px; }
+  .actions a { color: var(--ink); text-underline-offset: 3px; }
+  .play { padding: 0 12px 0 10px; }
+  .love {
+    border: 0;
+    background: none;
+    padding: 0 2px;
+    font-size: 15px;
+    color: var(--stamp);
+    cursor: pointer;
+  }
+  .love b { font-size: 20px; font-weight: 400; vertical-align: -2px; }
+  .remove {
+    border: 0;
+    background: none;
+    padding: 0;
+    font-size: 13px;
+    color: var(--ink-soft);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    cursor: pointer;
+  }
+
+  .toast {
+    position: fixed;
+    left: 50%;
+    bottom: 24px;
+    z-index: 20;
+    transform: translateX(-50%);
+    padding: 8px 18px;
+    border-radius: 999px;
+    background: var(--ink);
+    color: #fbf6ea;
+    font-size: 17px;
+    box-shadow: 0 6px 20px rgba(29, 42, 80, .3);
+  }
+  .toast[hidden] { display: none; }
+
+  @media (max-width: 600px) {
+    .lock { padding-left: 24px; font-size: 21px; }
+    .songs { padding-top: 20px; }
+    .finder { margin-top: 28px; }
+    .finder input { font-size: 17px; }
+    .compose { flex-direction: column; }
+    .compose .cover { width: 90px; }
+    .record { gap: 12px; padding: 12px; }
+    .sleeve, .sleeve .cover { width: 84px; height: 84px; }
+    .sleeve { margin-right: 18px; }
+    .back { left: 14px; bottom: 14px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .disc { transition: none; }
+    .playing .disc i { animation: none; }
+  }
+</style>
+</head>
+<body>
+
+<section class="lock" id="lock" hidden>
+  <p>हाम्रा गीतहरू सुन्न password:</p>
+  <form id="form" autocomplete="off">
+    <input id="pw" type="password" placeholder="..........." aria-label="Password">
+    <button id="btn" type="submit">खोल</button>
+  </form>
+  <p class="error" id="err" role="alert"></p>
+</section>
+
+<main class="songs" id="songs" hidden>
+  <h1>हाम्रा गीतहरू</h1>
+  <p class="sub">songs we send each other</p>
+
+  <div class="finder">
+    <label>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg>
+      <input id="search" type="search" autocomplete="off" placeholder="find a song, or paste a YouTube or Spotify link" aria-label="Find a song or paste a link" aria-controls="results">
+    </label>
+    <ul class="results" id="results" hidden aria-live="polite"></ul>
+  </div>
+
+  <div class="compose" id="compose" hidden>
+    <span id="compose-cover"></span>
+    <form id="compose-form">
+      <input id="compose-title" placeholder="song name" aria-label="Song name" maxlength="150">
+      <input id="compose-artist" placeholder="who sings it" aria-label="Who sings it" maxlength="120">
+      <textarea id="compose-note" placeholder="why this song? (you can leave it empty)" aria-label="Why this song" maxlength="300"></textarea>
+      <p class="error" id="compose-err" role="alert"></p>
+      <div class="buttons">
+        <button class="pill red" id="compose-send" type="submit">पठाउ</button>
+        <button class="pill" id="compose-cancel" type="button">Cancel</button>
+      </div>
+    </form>
+  </div>
+
+  <h2 class="count">गीतहरू <span id="count"></span></h2>
+  <ul class="records" id="records"></ul>
+</main>
+
+<p class="toast" id="toast" role="status" hidden></p>
+<a class="back" href="./">← चिठी</a>
+
+<script>
+  const API = "https://for-aarya-bot.netlify.app/api";
+  const $ = id => document.getElementById(id);
+  const remember = {
+    get: () => { try { return sessionStorage.getItem("letter-password") ?? ""; } catch { return ""; } },
+    set: v => { try { sessionStorage.setItem("letter-password", v); } catch { /* private window */ } },
+  };
+  let password = remember.get();
+  let me = "";
+
+  function el(tag, props = {}, kids = []) {
+    const node = Object.assign(document.createElement(tag), props);
+    node.append(...kids);
+    return node;
+  }
+
+  async function api(path, body) {
+    const res = await fetch(API + path, {
+      method: body ? "POST" : "GET",
+      headers: { "x-letter-password": password, ...(body ? { "content-type": "application/json" } : {}) },
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw Object.assign(new Error(data.error || "Something went wrong. Try again."), { status: res.status });
+    return data;
+  }
+
+  let toastTimer;
+  function toast(text) {
+    $("toast").textContent = text;
+    $("toast").hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { $("toast").hidden = true; }, 2600);
+  }
+
+  function cover(s) {
+    if (!s.cover) return el("span", { className: "cover", textContent: "♪", ariaHidden: "true" });
+    return el("img", { className: "cover", src: s.cover, alt: "", loading: "lazy", referrerPolicy: "no-referrer" });
+  }
+
+  const shortDate = iso => new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+  const searchText = s => [s.title, s.artist].filter(Boolean).join(" ");
+
+  // Where to listen: the link that was sent, then searches on the other places
+  function listenLinks(s) {
+    const links = [];
+    const yt = s.link && /youtu/.test(s.link), sp = s.link && /spotify/.test(s.link);
+    if (s.link) links.push([yt ? "YouTube" : "Spotify", s.link]);
+    if (!yt) links.push(["YouTube", "https://www.youtube.com/results?search_query=" + encodeURIComponent(searchText(s))]);
+    if (!sp) links.push(["Spotify", "https://open.spotify.com/search/" + encodeURIComponent(searchText(s))]);
+    if (s.apple) links.push(["Apple Music", s.apple]);
+    return links.map(([label, href]) => el("a", { href, textContent: label, target: "_blank", rel: "noopener" }));
+  }
+
+  // ---- playing the 30 second previews ---------------------------------------
+
+  const player = new Audio();
+  let playingCard = null;
+  function stop() {
+    player.pause();
+    if (playingCard) {
+      playingCard.classList.remove("playing");
+      playingCard.querySelector(".play").textContent = "▶ 30 sec";
+    }
+    playingCard = null;
+  }
+  player.addEventListener("ended", stop);
+  player.addEventListener("error", () => { if (playingCard) { stop(); toast("That preview won't play. Try the YouTube link."); } });
+
+  function playButton(s, card) {
+    const b = el("button", { type: "button", className: "pill play", textContent: "▶ 30 sec" });
+    b.addEventListener("click", () => {
+      if (playingCard === card) { stop(); return; }
+      stop();
+      player.src = s.preview;
+      player.play().catch(() => {});
+      playingCard = card;
+      card.classList.add("playing");
+      b.textContent = "❚❚ रोक";
+    });
+    return b;
+  }
+
+  // ---- the list ---------------------------------------------------------------
+
+  function loveButton(s) {
+    const b = el("button", { type: "button", className: "love" });
+    const show = () => {
+      const mine = s.loves.includes(me);
+      b.replaceChildren(el("b", { textContent: mine ? "♥" : "♡" }), s.loves.length ? " " + s.loves.join(" & ") : "");
+      b.ariaLabel = mine ? "Take back your heart" : "Give it a heart";
+      b.ariaPressed = String(mine);
+    };
+    b.addEventListener("click", async () => {
+      b.disabled = true;
+      try { ({ song: { loves: s.loves } } = await api(`/songs/${s.id}/love`, {})); show(); }
+      catch (e) { toast(e.message); }
+      b.disabled = false;
+    });
+    show();
+    return b;
+  }
+
+  // two clicks, so nothing goes from a slip
+  function removeButton(s, item) {
+    const b = el("button", { type: "button", className: "remove", textContent: "remove" });
+    b.addEventListener("click", async () => {
+      if (b.textContent === "remove") { b.textContent = "sure? remove it"; return; }
+      b.disabled = true;
+      try {
+        await api(`/songs/${s.id}/delete`, {});
+        if (playingCard === item.firstChild) stop();
+        item.remove();
+        onList = onList.filter(x => x.id !== s.id);
+        counts();
+        toast(`Removed ${s.title}.`);
+      } catch (e) { b.disabled = false; toast(e.message); }
+    });
+    return b;
+  }
+
+  function record(s) {
+    const li = el("li");
+    const card = el("div", { className: "record" });
+    const actions = el("div", { className: "actions" }, [
+      ...(s.preview ? [playButton(s, card)] : []),
+      ...listenLinks(s),
+      loveButton(s),
+      ...(s.by === me ? [removeButton(s, li)] : []),
+    ]);
+    card.append(
+      el("div", { className: "sleeve" }, [el("span", { className: "disc", ariaHidden: "true" }, [el("i")]), cover(s)]),
+      el("div", { className: "info" }, [
+        el("span", { className: "name", textContent: s.title }),
+        ...(s.artist ? [el("span", { className: "artist", textContent: s.artist })] : []),
+        el("span", { className: "from", textContent: `from ${s.by}, ${shortDate(s.added)}` }),
+        ...(s.note ? [el("p", { className: "said", textContent: s.note })] : []),
+        actions,
+      ]),
+    );
+    li.append(card);
+    return li;
+  }
+
+  function counts() {
+    const by = name => onList.filter(s => s.by === name).length;
+    $("count").textContent = onList.length ? `(${by("Aarya")} from Aarya, ${by("Shrabya")} from Shrabya)` : "";
+    if (!onList.length) $("records").replaceChildren(el("li", { className: "empty", textContent: "No songs yet. Find one above and send it." }));
+  }
+
+  let onList = [];
+  async function loadSongs() {
+    try {
+      const data = await api("/songs");
+      me = data.me;
+      // keep the record that is playing, so a refresh doesn't cut the song off
+      const playingId = playingCard && playingCard.dataset.id;
+      onList = data.songs;
+      if (!playingId) $("records").replaceChildren(...onList.map(s => {
+        const li = record(s);
+        li.firstChild.dataset.id = s.id;
+        return li;
+      }));
+      counts();
+      $("songs").hidden = false;
+      $("lock").hidden = true;
+      return true;
+    } catch (e) {
+      if (e.status === 401) {
+        remember.set("");
+        $("songs").hidden = true;
+        $("lock").hidden = false;
+        $("pw").focus();
+      }
+      return false;
+    }
+  }
+
+  // ---- finding and sending a song ---------------------------------------------
+
+  const search = $("search");
+  const results = $("results");
+  let picked = null;
+
+  function compose(song) {
+    picked = song;
+    results.hidden = true;
+    $("compose-cover").replaceChildren(cover(song));
+    $("compose-title").value = song.title ?? "";
+    $("compose-artist").value = song.artist ?? "";
+    $("compose-note").value = "";
+    $("compose-err").textContent = "";
+    $("compose").hidden = false;
+    $("compose-note").focus();
+  }
+  function closeCompose() {
+    picked = null;
+    $("compose").hidden = true;
+  }
+  $("compose-cancel").addEventListener("click", closeCompose);
+  $("compose-form").addEventListener("submit", async e => {
+    e.preventDefault();
+    const send = $("compose-send");
+    send.disabled = true;
+    try {
+      const { song } = await api("/songs", {
+        ...picked,
+        title: $("compose-title").value,
+        artist: $("compose-artist").value,
+        note: $("compose-note").value,
+      });
+      closeCompose();
+      search.value = "";
+      toast(`${song.title} is on the list.`);
+      loadSongs();
+    } catch (err) {
+      $("compose-err").textContent = err.message;
+    }
+    send.disabled = false;
+  });
+
+  function row(song) {
+    const pick = el("button", { type: "button", className: "pill red", textContent: "यो पठाउ" });
+    pick.addEventListener("click", () => compose(song));
+    const bits = [song.artist, song.year].filter(Boolean).join(", ");
+    return el("li", {}, [
+      cover(song),
+      el("span", { className: "what" }, [el("b", { textContent: song.title }), el("small", { textContent: bits })]),
+      pick,
+    ]);
+  }
+
+  const isLink = q => /^https:\/\/\S+$/.test(q);
+  let searchTimer, lastQuery = "";
+  search.addEventListener("input", () => {
+    clearTimeout(searchTimer);
+    const q = search.value.trim();
+    if (q.length < 2) { results.hidden = true; return; }
+    searchTimer = setTimeout(async () => {
+      lastQuery = q;
+      if (isLink(q)) {
+        try {
+          const { song } = await api("/songs/link?url=" + encodeURIComponent(q));
+          if (q === lastQuery) compose(song);
+        } catch (e) {
+          if (q !== lastQuery) return;
+          results.replaceChildren(el("li", { className: "note", textContent: e.message }));
+          results.hidden = false;
+        }
+        return;
+      }
+      let found = [], problem = "";
+      try { ({ results: found } = await api("/songs/search?q=" + encodeURIComponent(q))); }
+      catch (e) { problem = e.message; }
+      if (q !== lastQuery) return;  // a newer search is on its way
+      results.replaceChildren(
+        ...found.map(row),
+        ...(problem ? [el("li", { className: "note", textContent: problem })] : []),
+        ...(!found.length && !problem ? [el("li", { className: "note", textContent: "No song by that name. Paste its YouTube link, or send it as you wrote it:" })] : []),
+        row({ title: q, artist: "", year: "as written" }),
+      );
+      results.hidden = false;
+    }, 350);
+  });
+  search.addEventListener("keydown", e => { if (e.key === "Escape") { results.hidden = true; search.blur(); } });
+  document.addEventListener("click", e => { if (!e.target.closest(".finder")) results.hidden = true; });
+  search.addEventListener("focus", () => { if (results.children.length && search.value.trim().length > 1 && !isLink(search.value.trim())) results.hidden = false; });
+
+  // ---- unlocking ----------------------------------------------------------
+
+  $("form").addEventListener("submit", async e => {
+    e.preventDefault();
+    password = $("pw").value.trim();
+    $("err").textContent = "";
+    if (await loadSongs()) remember.set(password);
+    else $("err").textContent = "हैन नि, फेरि लेख त।";
+  });
+
+  // Pick up what the other one sends without a reload
+  setInterval(() => { if (!document.hidden && !$("songs").hidden && results.hidden && $("compose").hidden) loadSongs(); }, 60000);
+  document.addEventListener("visibilitychange", () => { if (!document.hidden && !$("songs").hidden && $("compose").hidden) loadSongs(); });
+
+  if (password) loadSongs();
+  else { $("lock").hidden = false; $("pw").focus(); }
+</script>
+</body>
+</html>

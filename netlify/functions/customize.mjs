@@ -16,6 +16,12 @@
 //   POST /api/pictures {photo, thumb, caption, taken} -> adds a picture (both base64 JPEGs)
 //   GET  /api/pictures/<id>/photo, /api/pictures/<id>/thumb -> the picture, or its small copy
 //   POST /api/pictures/<id>/delete  -> removes a picture, only by the one who added it
+//   GET  /api/songs           -> songs we have sent each other, newest first, and who is asking
+//   GET  /api/songs/search?q=       -> songs matching a name, with artist, cover and a 30 second preview (from iTunes)
+//   GET  /api/songs/link?url=       -> the name and picture behind a YouTube or Spotify link
+//   POST /api/songs {title, artist, cover, preview, apple, link, note} -> sends a song
+//   POST /api/songs/<id>/love       -> adds or takes back the asker's heart
+//   POST /api/songs/<id>/delete     -> removes a song, only by the one who sent it
 import Anthropic from "@anthropic-ai/sdk";
 import { getStore } from "@netlify/blobs";
 import { createHash, timingSafeEqual } from "node:crypto";
@@ -27,6 +33,7 @@ const MAX_TEXT = 20000;     // characters in a typed letter
 const MAX_PHOTO = 4 << 20;  // bytes in a letter photo or a picture
 const MAX_THUMB = 1 << 19;  // bytes in a picture's small copy
 const MAX_CAPTION = 300;    // characters under a picture
+const MAX_NOTE = 300;       // characters sent with a song
 const client = new Anthropic(); // reads ANTHROPIC_API_KEY
 
 const cors = origin => ({
@@ -179,6 +186,64 @@ async function searchMovies(q) {
 const posterOk = p => typeof p === "string" && /^https:\/\/m\.media-amazon\.com\/images\/[^\s"'<>()\\]+$/.test(p) && p.length < 400;
 const yearOk = y => Number.isInteger(y) && y > 1880 && y < 2100;
 
+// Songs: one list, newest first.
+const songsIn = async store => (await store.get("songs", { type: "json" })) ?? [];
+
+// iTunes search needs no key and has most Nepali songs too
+async function searchSongs(q) {
+  const query = q.trim().slice(0, 80);
+  if (!query) return [];
+  const url = `https://itunes.apple.com/search?media=music&entity=song&limit=10&term=${encodeURIComponent(query)}`;
+  const res = await fetch(url, { signal: AbortSignal.timeout(5000) });
+  if (!res.ok) throw new Error("search failed");
+  const { results = [] } = await res.json();
+  return results.map(r => ({
+    title: r.trackName,
+    artist: r.artistName,
+    year: r.releaseDate ? Number(r.releaseDate.slice(0, 4)) : null,
+    cover: r.artworkUrl100?.replace(/\/100x100bb\./, "/300x300bb.") ?? null,
+    preview: r.previewUrl ?? null,
+    apple: r.trackViewUrl?.replace(/[?&]uo=\d+$/, "") ?? null,
+  }));
+}
+
+// A pasted YouTube or Spotify link: both sites say what is behind it without a key
+const YOUTUBE = /^https:\/\/(www\.|m\.|music\.)?(youtube\.com\/(watch\?|shorts\/)|youtu\.be\/)[^\s"'<>\\]+$/;
+const SPOTIFY = /^https:\/\/open\.spotify\.com\/(intl-[a-z-]+\/)?(track|album|playlist)\/[A-Za-z0-9]+[^\s"'<>\\]*$/;
+const linkOk = l => typeof l === "string" && l.length < 300 && (YOUTUBE.test(l) || SPOTIFY.test(l));
+async function lookUpLink(link) {
+  if (!linkOk(link)) return null;
+  const oembed = YOUTUBE.test(link) ? "https://www.youtube.com/oembed?format=json&url=" : "https://open.spotify.com/oembed?url=";
+  const res = await fetch(oembed + encodeURIComponent(link), { signal: AbortSignal.timeout(5000) });
+  if (!res.ok) return null;
+  const o = await res.json();
+  // YouTube's default thumbnail has black bars above and below; the medium one does not
+  const cover = o.thumbnail_url?.replace(/\/hqdefault\.jpg$/, "/mqdefault.jpg") ?? null;
+  return { title: o.title ?? "", artist: o.author_name ?? "", cover, link };
+}
+
+// Only keep details that look like what the search or the link gives back
+const urlOk = (u, host) => typeof u === "string" && u.length < 500 && host.test(u) && !/[\s"'<>()\\]/.test(u);
+const COVER = /^https:\/\/(is\d+-ssl\.mzstatic\.com|i\.ytimg\.com|image-cdn-[a-z0-9-]+\.spotifycdn\.com|i\.scdn\.co)\//;
+const PREVIEW = /^https:\/\/audio-ssl\.itunes\.apple\.com\//;
+const APPLE = /^https:\/\/music\.apple\.com\//;
+const text = (v, max) => (typeof v === "string" ? v.trim().slice(0, max) : "");
+
+async function addSong(store, by, body) {
+  const song = { id: newId(), title: text(body.title, 150), artist: text(body.artist, 120), by, added: new Date().toISOString(), note: text(body.note, MAX_NOTE), loves: [] };
+  if (!song.title) return { error: "Find a song or paste a link first." };
+  if (urlOk(body.cover, COVER)) song.cover = body.cover;
+  if (urlOk(body.preview, PREVIEW)) song.preview = body.preview;
+  if (urlOk(body.apple, APPLE)) song.apple = body.apple;
+  if (linkOk(body.link)) song.link = body.link;
+  const songs = await songsIn(store);
+  const same = s => s.title.toLowerCase() === song.title.toLowerCase() && s.artist.toLowerCase() === song.artist.toLowerCase();
+  const twin = songs.find(s => (song.link && s.link === song.link) || same(s));
+  if (twin) return { error: `${twin.by} already sent ${twin.title}.` };
+  await store.setJSON("songs", [song, ...songs]);
+  return { song };
+}
+
 // Earlier turns are sent as plain text so Claude knows what "make it bigger" refers to.
 function cleanHistory(history) {
   if (!Array.isArray(history)) return [];
@@ -228,6 +293,7 @@ export default async (req) => {
   const [, letterId, letterAction] = route.match(/^letters\/([a-z0-9]+)\/(photo|delete)$/) ?? [];
   const [, movieId, movieAction] = route.match(/^movies\/([a-z0-9]+)\/(watched|delete)$/) ?? [];
   const [, pictureId, pictureAction] = route.match(/^pictures\/([a-z0-9]+)\/(photo|thumb|delete)$/) ?? [];
+  const [, songId, songAction] = route.match(/^songs\/([a-z0-9]+)\/(love|delete)$/) ?? [];
 
   try {
     if (req.method === "GET" && route === "settings") return send({ settings: await load(store), me });
@@ -252,7 +318,36 @@ export default async (req) => {
       if (!bytes) return send({ error: "not found" }, 404);
       return new Response(bytes, { headers: { ...cors(origin), "Content-Type": "image/jpeg", "Cache-Control": "private, max-age=31536000" } });
     }
+    if (req.method === "GET" && route === "songs") return send({ songs: await songsIn(store), me });
+    if (req.method === "GET" && route === "songs/search") {
+      try { return send({ results: await searchSongs(new URL(req.url).searchParams.get("q") ?? "") }); }
+      catch { return send({ error: "The song search isn't answering. Paste a YouTube or Spotify link instead." }, 502); }
+    }
+    if (req.method === "GET" && route === "songs/link") {
+      const found = await lookUpLink(new URL(req.url).searchParams.get("url") ?? "").catch(() => null);
+      if (!found) return send({ error: "That link didn't work. Use a YouTube or Spotify song link." }, 400);
+      return send({ song: found });
+    }
     if (req.method !== "POST") return send({ error: "not found" }, 404);
+
+    if (route === "songs") {
+      const { song, error } = await addSong(store, me, await req.json());
+      if (error) return send({ error }, 400);
+      return send({ song });
+    }
+    if (songAction) {
+      const songs = await songsIn(store);
+      const song = songs.find(s => s.id === songId);
+      if (!song) return send({ error: "That song is already gone." }, 404);
+      if (songAction === "delete") {
+        if (song.by !== me) return send({ error: "Only the one who sent it can remove it." }, 403);
+        await store.setJSON("songs", songs.filter(s => s.id !== songId));
+        return send({ ok: true });
+      }
+      song.loves = song.loves.includes(me) ? song.loves.filter(n => n !== me) : [...song.loves, me];
+      await store.setJSON("songs", songs);
+      return send({ song });
+    }
 
     if (route === "reactions") {
       const { letter, emoji } = await req.json();

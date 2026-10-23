@@ -42,13 +42,19 @@ The "तस्बिरहरू" button above "फिल्महरू" goes t
 
 To add pictures, tap the empty polaroid at the top or drop files on it. Several can go at once. Each one waits in a tray with a box for a caption and the day it was taken, which the page reads from the photo's camera data when it has any and from the file's date when it does not. "टाँस" sends them one at a time. The page shrinks each picture to 2000 pixels on the long side, and also sends a 600 pixel copy for the wall so the page loads quickly. Only the one who added a picture can remove it.
 
+## Our songs
+
+The "गीतहरू" button above "तस्बिरहरू" goes to `songs.html`, where we send each other songs. Each song is a record in its sleeve with the cover on it, who sent it, the day, and a short note about why. "▶ 30 sec" plays a short preview, and the record slides out and spins while it plays. Each song has links to find it on YouTube and Spotify, and to Apple Music when it came from the search. Either of us can give a song a heart. Only the one who sent a song can remove it.
+
+The box at the top searches songs as you type. The server asks the iTunes search for this (`/api/songs/search`), which needs no key and has most Nepali songs as well. A YouTube or Spotify link pasted into the box works too: the server asks that site for the song's name and picture (`/api/songs/link`). If neither finds it, a song can still be sent by its name.
+
 Nobody else can see the lists, the letters or the photos: every request to the server needs one of our two passwords, and the server answers a wrong one with "wrong password". The page files on GitHub hold no letters or movies.
 
 The password is kept in the browser tab after the letter opens, so going to the movies page and back does not ask for it again. Closing the tab forgets it.
 
 ## Put it online
 
-Upload `index.html`, `movies.html`, `pictures.html`, `letter.js` and the `art` folder. Do not upload `letter.jpg`, because that is the unlocked letter.
+Upload `index.html`, `movies.html`, `pictures.html`, `songs.html`, `letter.js` and the `art` folder. Do not upload `letter.jpg`, because that is the unlocked letter.
 
 The quickest way is Netlify Drop (app.netlify.com/drop): make a folder with only those things and drag it onto the page.
 
